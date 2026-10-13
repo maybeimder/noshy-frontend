@@ -1,9 +1,56 @@
 @import "tailwindcss";
 
+/* Tokens from DESIGN.md — do not add values outside the design system. */
+@theme {
+      /* Palette */
+      --color-primary: #e94b97; /* brand.primary */
+      --color-primary-strong: #c52d75; /* functional variant when brand.primary fails 3:1 */
+      --color-primary-soft: #fbe5ef; /* brand.primary.soft */
+      --color-secondary: #e9a178; /* brand.secondary */
+      --color-secondary-soft: #fecdb8; /* brand.secondary.soft */
+      --color-canvas: #fbf4f2; /* surface.canvas */
+      --color-card: #ffffff; /* surface.card */
+      --color-ink: #1d092c; /* text.primary */
+      --color-ink-muted: #715b77; /* text.secondary */
+      --color-line: #e8dde4; /* border.subtle */
+      --color-success: #217a46; /* status.success */
+      --color-warning: #8a4b16; /* status.warning */
+      --color-error: #b42342; /* status.error */
+
+      /* Typography */
+      --font-sans: "Nunito", ui-sans-serif, system-ui, sans-serif;
+      --font-logo: "All Round Gothic", "Nunito", ui-sans-serif, sans-serif;
+
+      --text-page: 2rem; /* 32 / 40 */
+      --text-page--line-height: 2.5rem;
+      --text-section: 1.5rem; /* 24 / 32 */
+      --text-section--line-height: 2rem;
+      --text-card: 1.125rem; /* 18 / 24 */
+      --text-card--line-height: 1.5rem;
+      --text-metric: 2.25rem; /* 36 / 44 */
+      --text-metric--line-height: 2.75rem;
+
+      /* Radii */
+      --radius-card: 16px;
+      --radius-control: 12px;
+}
+
 @layer base {
       * {
             padding: 0;
             margin: 0;
             box-sizing: border-box;
+      }
+
+      body {
+            @apply bg-canvas font-sans text-base text-ink antialiased;
+      }
+}
+
+@utility scrollbar-none {
+      scrollbar-width: none;
+
+      &::-webkit-scrollbar {
+            display: none;
       }
 }

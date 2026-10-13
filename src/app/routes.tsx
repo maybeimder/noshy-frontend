@@ -1,15 +1,14 @@
-import { lazy } from "react";
+import { lazy, type ReactElement } from "react";
 
-/*
-const ExamsListPage     = lazy(() => import("@/features/exams/pages/ExamsListPage"));
-const ExamDetailPage    = lazy(() => import("@/features/exams/pages/ExamDetailPage"));
-const LoginPage         = lazy(() => import("@/features/auth/pages/LoginPage"));
+const HomePage = lazy(() => import("@/modules/cooking/pages/HomePage"));
+const LoginPage = lazy(() => import("@/modules/auth/pages/LoginPage"));
+const RegisterPage = lazy(() => import("@/modules/auth/pages/RegisterPage"));
 
-export const routes = [
-  { path: "/login", element: <LoginPage />, public: true },
-  { path: "/exams", element: <ExamsListPage /> },
-  { path: "/exams/:examId", element: <ExamDetailPage /> },
+/** guest: only signed-out users · private: requires a session · public: everyone. */
+export type RouteAccess = "public" | "guest" | "private";
+
+export const routes: { path: string; element: ReactElement; access: RouteAccess }[] = [
+      { path: "/login", element: <LoginPage />, access: "guest" },
+      { path: "/registro", element: <RegisterPage />, access: "guest" },
+      { path: "/", element: <HomePage />, access: "private" },
 ];
-*/
-
-export const routes = []

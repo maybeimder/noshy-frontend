@@ -12,6 +12,12 @@ export default defineConfig({
             },
       },
       server: {
-            proxy: { "/api": "http://localhost:3000" },
+            // Backend routes have no /api prefix.
+            proxy: {
+                  "/api": {
+                        target: "http://localhost:3000",
+                        rewrite: (path) => path.replace(/^\/api/, ""),
+                  },
+            },
       },
 });
