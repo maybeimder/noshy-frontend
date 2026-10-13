@@ -17,6 +17,7 @@ const ShoppingListPage = lazy(() => import("@/modules/shopping-list/pages/Shoppi
 const ProfilePage = lazy(() => import("@/modules/profile/pages/ProfilePage"));
 const GenerateRecipePage = lazy(() => import("@/modules/food/pages/GenerateRecipePage"));
 const GeneratedRecipePage = lazy(() => import("@/modules/food/pages/GeneratedRecipePage"));
+const LibraryRecipePage = lazy(() => import("@/modules/food/pages/LibraryRecipePage"));
 
 export const routes: RouteObject[] = [
       {
@@ -39,6 +40,7 @@ export const routes: RouteObject[] = [
                               { path: "/recetas", element: <RecipesPage /> },
                               { path: "/recetas/:id", element: <RecipeDetailPage /> },
                               { path: "/comunidad/:id", element: <CommunityRecipePage /> },
+                              { path: "/explorar/:id", element: <LibraryRecipePage /> },
                               { path: "/compras", element: <ShoppingListPage /> },
                               { path: "/perfil", element: <ProfilePage /> },
                         ],

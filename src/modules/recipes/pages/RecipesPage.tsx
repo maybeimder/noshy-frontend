@@ -1,6 +1,7 @@
 import { Link, useSearchParams } from "react-router-dom";
 import { useFeedbackHistory } from "@/modules/feedback/hooks/useFeedback";
 import { useSavedShoppingList } from "@/modules/shopping-list/hooks/useShoppingList";
+import LibraryFeed from "@/modules/food/components/LibraryFeed";
 import PageHeader from "@/shared/components/layout/PageHeader";
 import { buttonBase, buttonVariants } from "@/shared/components/ui/Button";
 import Icon from "@/shared/components/ui/Icon";
@@ -15,16 +16,19 @@ import type { Recipe } from "../types";
 const tabs = [
       { id: "mias", label: "Mis recetas" },
       { id: "comunidad", label: "Comunidad" },
+      { id: "explorar", label: "Explorar" },
 ] as const;
+type Tab = (typeof tabs)[number]["id"];
 
 export default function RecipesPage() {
       const [params, setParams] = useSearchParams();
-      const tab = params.get("ver") === "comunidad" ? "comunidad" : "mias";
+      const ver = params.get("ver");
+      const tab: Tab = ver === "comunidad" || ver === "explorar" ? ver : "mias";
       const mine = useMyRecipes();
       const community = useCommunityRecipes();
       const history = useFeedbackHistory();
       const { saved } = useSavedShoppingList();
-      const query = tab === "mias" ? mine : community;
+      const query = tab === "comunidad" ? community : mine;
       // From the home cooks row: /recetas?ver=comunidad&autor=Nicolás
       const author = tab === "comunidad" ? params.get("autor") : null;
       const recipes = (query.data ?? []).filter((recipe) => !author || recipe.authorName === author);
@@ -63,7 +67,7 @@ export default function RecipesPage() {
                   />
 
                   <main className="mx-auto flex max-w-xl flex-col gap-4 px-5 pt-3">
-                        <div role="tablist" aria-label="Tipo de recetas" className="grid grid-cols-2 gap-1 rounded-full bg-card p-1.5">
+                        <div role="tablist" aria-label="Tipo de recetas" className="grid grid-cols-3 gap-1 rounded-full bg-card p-1.5">
                               {tabs.map(({ id, label }) => {
                                     const selected = tab === id;
                                     return (
@@ -118,7 +122,9 @@ export default function RecipesPage() {
                         )}
 
                         <section id="recipes-panel" role="tabpanel" aria-labelledby={`tab-${tab}`}>
-                              {query.isPending ? (
+                              {tab === "explorar" ? (
+                                    <LibraryFeed />
+                              ) : query.isPending ? (
                                     <LoadingState />
                               ) : query.isError ? (
                                     <ErrorState message={query.error.message} onRetry={() => query.refetch()} />

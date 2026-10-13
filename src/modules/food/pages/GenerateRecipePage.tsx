@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useInventory } from "@/modules/inventory/hooks/useInventory";
 import type { InventoryItem } from "@/modules/inventory/types";
 import PageHeader from "@/shared/components/layout/PageHeader";
@@ -31,13 +31,18 @@ const chip = (selected: boolean) =>
 // POST /food/recipes/generate: pick pantry ingredients (plus extras), servings and notes.
 export default function GenerateRecipePage() {
       const navigate = useNavigate();
+      const [params] = useSearchParams();
+      // From "Cocinar mi versión" in Explorar: the reference recipe's ingredients (English) and title.
+      const fromLibrary = params.get("ingredientes")?.split(",").map((s) => s.trim()).filter(Boolean).slice(0, MAX_INGREDIENTS) ?? [];
+      const idea = params.get("idea");
       const inventory = useInventory();
       const generate = useGenerateRecipe();
-      const [selected, setSelected] = useState<string[] | null>(null);
-      const [extras, setExtras] = useState<string[]>([]);
+      // With a library idea, start from its ingredients only (no pantry pre-selection).
+      const [selected, setSelected] = useState<string[] | null>(fromLibrary.length ? [] : null);
+      const [extras, setExtras] = useState<string[]>(fromLibrary);
       const [extra, setExtra] = useState("");
       const [servings, setServings] = useState(2);
-      const [notes, setNotes] = useState("");
+      const [notes, setNotes] = useState(idea ? `Inspirada en «${idea}». En español.`.slice(0, 300) : "");
 
       const items = inventory.data ?? [];
       // Until the user touches the list, the first few pantry items are pre-selected.

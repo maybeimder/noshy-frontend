@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError } from "@/shared/lib/axios";
 import { foodApi } from "../api/food.api";
+import type { LibraryBrowseFilters } from "../types";
 
 /** Value that only updates after `delay` ms without changes (search-as-you-type). */
 export function useDebounced<T>(value: T, delay = 300) {
@@ -53,6 +54,32 @@ export function useGeneratedRecipe(id: string | undefined) {
             queryKey: ["food", "generated", id],
             queryFn: () => foodApi.generated(id!),
             enabled: Boolean(id),
+            staleTime: Infinity, // a generated recipe never changes
+      });
+}
+
+/**
+ * Infinite library feed (GET /food/library/browse). `seed` restarts a random walk ("Barajar")
+ * because the first random page starts at a different recipe each time.
+ */
+export function useLibraryBrowse(filters: LibraryBrowseFilters, seed = 0) {
+      return useInfiniteQuery({
+            queryKey: ["food", "library", filters, seed],
+            queryFn: ({ pageParam }) => foodApi.browseLibrary(filters, pageParam),
+            initialPageParam: undefined as string | undefined,
+            getNextPageParam: (page) => page.nextCursor ?? undefined,
+            retry: false,
+            staleTime: Infinity, // a random feed must not reshuffle under the user's finger
+      });
+}
+
+export function useLibraryRecipe(id: string | undefined) {
+      return useQuery({
+            queryKey: ["food", "library", "recipe", id],
+            queryFn: () => foodApi.libraryRecipe(id!),
+            enabled: Boolean(id),
+            retry: false,
+            staleTime: Infinity,
       });
 }
 

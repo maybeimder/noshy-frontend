@@ -103,3 +103,40 @@ export type RecipeGenerationInput = {
       servings: number;
       notes?: string;
 };
+
+// ---------- Recipe library (RecipeNLG, ~2.2 M recipes, in English) ----------
+
+export type LibrarySort = "random" | "recent" | "oldest";
+
+/** Light card from GET /food/library/browse (no steps or amounts). */
+export type LibraryRecipeCard = {
+      id: number;
+      title: string;
+      /** Ingredient names (English, as in the dataset's `ner`). */
+      ner: string[];
+      nIngredients: number;
+      source?: string;
+      url?: string;
+      image: string | null;
+      tags: RecipeTags;
+};
+
+export type LibraryBrowsePage = {
+      sort: LibrarySort;
+      limit: number;
+      items: LibraryRecipeCard[];
+      /** null when there are no more pages. */
+      nextCursor: string | null;
+};
+
+/** GET /food/library/recipes/:id */
+export type LibraryRecipe = LibraryRecipeCard & {
+      /** Free text lines, e.g. "1 c. flour". */
+      ingredients: string[];
+      directions: string[];
+};
+
+export type LibraryBrowseFilters = {
+      sort: LibrarySort;
+      maxIngredients?: number;
+};
