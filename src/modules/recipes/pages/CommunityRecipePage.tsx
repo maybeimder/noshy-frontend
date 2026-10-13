@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import PageHeader from "@/shared/components/layout/PageHeader";
+import Avatar from "@/shared/components/ui/Avatar";
 import Button from "@/shared/components/ui/Button";
 import Icon from "@/shared/components/ui/Icon";
 import { EmptyState, ErrorState, LoadingState } from "@/shared/components/ui/QueryState";
 import { ApiError } from "@/shared/lib/axios";
 import { formatDate } from "@/shared/lib/format";
 import RecipeBody from "../components/RecipeBody";
-import RecipeCover from "../components/RecipeCover";
+import RecipeCover, { PhotoCredit } from "../components/RecipeCover";
 import RecipeFeedback from "../components/RecipeFeedback";
 import ShoppingListDialog from "../components/ShoppingListDialog";
 import { useCommunityRecipe, useRecipeMutations } from "../hooks/useRecipes";
@@ -49,10 +50,16 @@ export default function CommunityRecipePage() {
             <>
                   <PageHeader title={r.title} backTo="/recetas?ver=comunidad" />
                   <main className="mx-auto flex max-w-xl flex-col gap-6 px-6 pt-6">
-                        <RecipeCover id={r.id} title={r.title} size="lg" />
-                        <p className="text-base text-ink-muted">
-                              Por <strong className="text-ink">{r.authorName ?? "alguien de la comunidad"}</strong>
-                              {r.publishedAt && ` · ${formatDate(r.publishedAt)}`}
+                        <div className="flex flex-col gap-2">
+                              <RecipeCover recipe={r} size="lg" />
+                              <PhotoCredit recipe={r} />
+                        </div>
+                        <p className="flex items-center gap-3 text-base text-ink-muted">
+                              <Avatar name={r.authorName ?? "?"} url={r.authorAvatarUrl} size="sm" />
+                              <span>
+                                    Por <strong className="text-ink">{r.authorName ?? "alguien de la comunidad"}</strong>
+                                    {r.publishedAt && ` · ${formatDate(r.publishedAt)}`}
+                              </span>
                         </p>
 
                         <section aria-label="Acciones" className="flex flex-col gap-2">

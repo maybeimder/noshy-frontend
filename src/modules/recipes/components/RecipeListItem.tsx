@@ -17,7 +17,7 @@ export default function RecipeListItem({ recipe, to, showAuthor = false }: Recip
                   to={to}
                   className="group flex items-center gap-4 rounded-card bg-card p-3 transition-colors hover:bg-secondary-soft/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong"
             >
-                  <RecipeCover id={recipe.id} title={recipe.title} />
+                  <RecipeCover recipe={recipe} />
                   <div className="min-w-0 flex-1">
                         <h3 className="truncate text-title font-bold text-ink">{recipe.title}</h3>
                         <p className="text-sm text-ink-muted">

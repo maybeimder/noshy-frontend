@@ -12,11 +12,15 @@ import PageHeader from "@/shared/components/layout/PageHeader";
 import Button from "@/shared/components/ui/Button";
 import FormAlert from "@/shared/components/ui/FormAlert";
 import Icon from "@/shared/components/ui/Icon";
+import ImagePicker from "@/shared/components/ui/ImagePicker";
 import { EmptyState, ErrorState, LoadingState } from "@/shared/components/ui/QueryState";
 import TextArea from "@/shared/components/ui/TextArea";
 import TextField from "@/shared/components/ui/TextField";
 import { useMyRecipe, useRecipeMutations } from "../hooks/useRecipes";
 import type { Ingredient, Recipe, RecipeInput } from "../types";
+
+/** Navigation state read by the detail page to warn when the server ignored the photo. */
+export type PhotoNotSavedState = { photoNotSaved?: boolean };
 
 const removeButton =
       "grid size-11 shrink-0 place-items-center rounded-control text-ink-muted hover:bg-primary-soft hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong disabled:invisible";
@@ -62,6 +66,9 @@ function RecipeForm({ initial }: { initial?: Recipe }) {
             initial ? initial.ingredients.map(toDraft) : [emptyIngredient()],
       );
       const [steps, setSteps] = useState<string[]>(initial?.instructions ?? [""]);
+      const [imageUrl, setImageUrl] = useState<string | null>(initial?.imageUrl ?? null);
+      // Only send the photo when it changed, so a suggested photo is not re-labelled as an upload.
+      const [imageTouched, setImageTouched] = useState(false);
       const [errors, setErrors] = useState<FormErrors>({ rows: {} });
       const saving = create.isPending || update.isPending;
       const saveError = create.error ?? update.error;
@@ -88,20 +95,44 @@ function RecipeForm({ initial }: { initial?: Recipe }) {
             setErrors(next);
             if (next.title || next.ingredients || next.instructions || Object.keys(next.rows).length) return;
 
-            const input: RecipeInput = { title: title.trim(), ingredients: parsed, instructions };
+            const input: RecipeInput = {
+                  title: title.trim(),
+                  ingredients: parsed,
+                  instructions,
+                  ...(imageTouched ? { imageUrl } : {}),
+            };
+            // Until the backend stores photos it silently drops imageUrl: tell the user instead of pretending.
+            const done = (recipe: Recipe) => {
+                  const state: PhotoNotSavedState = {
+                        photoNotSaved: imageTouched && imageUrl !== null && recipe.imageUrl !== imageUrl,
+                  };
+                  navigate(`/recetas/${recipe.id}`, { replace: true, state });
+            };
             if (initial) {
-                  update.mutate(
-                        { id: initial.id, input },
-                        { onSuccess: () => navigate(`/recetas/${initial.id}`, { replace: true }) },
-                  );
+                  update.mutate({ id: initial.id, input }, { onSuccess: done });
             } else {
-                  create.mutate(input, { onSuccess: (recipe) => navigate(`/recetas/${recipe.id}`, { replace: true }) });
+                  create.mutate(input, { onSuccess: done });
             }
       };
 
       return (
             <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-8">
                   {saveError && <FormAlert>{saveError.message}</FormAlert>}
+
+                  <ImagePicker
+                        label="Foto de la receta"
+                        purpose="recipe"
+                        value={imageUrl}
+                        onChange={(url) => {
+                              setImageUrl(url);
+                              setImageTouched(true);
+                        }}
+                        hint={
+                              initial?.imageSource === "pexels" && !imageTouched
+                                    ? "Foto sugerida automáticamente. Puedes cambiarla por la tuya."
+                                    : "Opcional. Si no subes una, te sugeriremos una foto."
+                        }
+                  />
 
                   <TextField
                         label="Nombre de la receta"

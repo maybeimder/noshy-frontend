@@ -20,6 +20,8 @@ type AuthContextValue = {
       user: User | null;
       /** Stores the session returned by POST /auth/login or /auth/register. */
       startSession: (auth: AuthResponse) => void;
+      /** Replaces the cached user after a profile change. */
+      setUser: (user: User) => void;
       logout: () => void;
 };
 
@@ -55,6 +57,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             [queryClient],
       );
 
+      const setUser = useCallback((user: User) => queryClient.setQueryData(meQueryKey, user), [queryClient]);
+
       useEffect(() => {
             window.addEventListener(UNAUTHORIZED_EVENT, logout);
             return () => window.removeEventListener(UNAUTHORIZED_EVENT, logout);
@@ -73,8 +77,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     : "loading";
 
       const value = useMemo(
-            () => ({ status, user: me.data ?? null, startSession, logout }),
-            [status, me.data, startSession, logout],
+            () => ({ status, user: me.data ?? null, startSession, setUser, logout }),
+            [status, me.data, startSession, setUser, logout],
       );
 
       return <AuthContext value={value}>{children}</AuthContext>;

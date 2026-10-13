@@ -1,20 +1,42 @@
 import { Link } from "react-router-dom";
+import { useMutation } from "@tanstack/react-query";
+import { authApi } from "@/modules/auth/api/auth.api";
 import { useAuth } from "@/modules/auth/hooks/useAuth";
 import { useFeedbackHistory } from "@/modules/feedback/hooks/useFeedback";
 import { eventLabels, targetLabels } from "@/modules/feedback/utils/labels";
 import { useActivePlan } from "@/modules/plans/hooks/usePlan";
 import { objectiveLabel, targetFields } from "@/modules/plans/utils/labels";
 import PageHeader from "@/shared/components/layout/PageHeader";
+import Avatar from "@/shared/components/ui/Avatar";
 import Button from "@/shared/components/ui/Button";
 import Icon from "@/shared/components/ui/Icon";
+import ImagePicker from "@/shared/components/ui/ImagePicker";
 import { ErrorState, LoadingState } from "@/shared/components/ui/QueryState";
+import { ApiError } from "@/shared/lib/axios";
 import { formatDateTime } from "@/shared/lib/format";
 
 const linkButton =
       "inline-flex min-h-11 items-center justify-center gap-2 rounded-control px-6 text-sm font-semibold text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong";
 
 export default function ProfilePage() {
-      const { user, logout } = useAuth();
+      const { user, setUser, logout } = useAuth();
+      const avatar = useMutation({
+            mutationFn: async (avatarUrl: string | null) => {
+                  let updated;
+                  try {
+                        updated = await authApi.updateMe({ avatarUrl });
+                  } catch (error) {
+                        if (error instanceof ApiError && error.status === 404)
+                              throw new Error("El servidor todavía no guarda fotos de perfil.");
+                        throw error;
+                  }
+                  // A backend without avatar support answers without the field: do not pretend it was saved.
+                  if ((updated.avatarUrl ?? null) !== avatarUrl)
+                        throw new Error("El servidor todavía no guarda fotos de perfil.");
+                  return updated;
+            },
+            onSuccess: setUser,
+      });
       const plan = useActivePlan();
       const history = useFeedbackHistory();
 
@@ -22,17 +44,30 @@ export default function ProfilePage() {
             <>
                   <PageHeader title="Perfil" />
                   <main className="mx-auto flex max-w-xl flex-col gap-6 px-6 pt-6">
-                        <section className="flex items-center gap-4 rounded-card bg-card p-6">
-                              <span
-                                    aria-hidden
-                                    className="grid size-16 shrink-0 place-items-center rounded-full bg-primary font-logo text-section font-extrabold text-ink"
-                              >
-                                    {user?.name.charAt(0).toUpperCase()}
-                              </span>
+                        <section className="flex flex-col gap-6 rounded-card bg-card p-6">
                               <div className="min-w-0">
                                     <h2 className="truncate text-section font-bold text-ink">{user?.name}</h2>
                                     <p className="truncate text-base text-ink-muted">{user?.email}</p>
                               </div>
+                              <ImagePicker
+                                    label="Foto de perfil"
+                                    purpose="avatar"
+                                    shape="circle"
+                                    value={user?.avatarUrl ?? null}
+                                    onChange={(url) => avatar.mutate(url)}
+                                    placeholder={<Avatar name={user?.name ?? ""} size="lg" />}
+                              />
+                              {avatar.isPending && (
+                                    <p role="status" className="text-sm text-ink-muted">
+                                          Guardando tu foto…
+                                    </p>
+                              )}
+                              {avatar.error && (
+                                    <p role="alert" className="flex items-start gap-1 text-sm text-error">
+                                          <Icon name="alert" className="mt-0.5 size-4 shrink-0" />
+                                          {avatar.error.message}
+                                    </p>
+                              )}
                         </section>
 
                         <section aria-labelledby="plan" className="flex flex-col gap-4 rounded-card bg-card p-6">

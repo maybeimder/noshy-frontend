@@ -15,7 +15,7 @@ export default function RecipeCard({ recipe, to }: RecipeCardProps) {
                   to={to}
                   className="group flex h-full flex-col overflow-hidden rounded-card bg-card focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong"
             >
-                  <RecipeCover id={recipe.id} title={recipe.title} size="lg" />
+                  <RecipeCover recipe={recipe} size="lg" />
                   <div className="flex flex-1 items-end gap-4 p-4">
                         <div className="min-w-0 flex-1">
                               {recipe.authorName && (

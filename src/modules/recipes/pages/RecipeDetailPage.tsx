@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import PageHeader, { iconButtonClass } from "@/shared/components/layout/PageHeader";
 import Button from "@/shared/components/ui/Button";
 import Dialog from "@/shared/components/ui/Dialog";
@@ -7,15 +7,18 @@ import Icon from "@/shared/components/ui/Icon";
 import { EmptyState, ErrorState, LoadingState } from "@/shared/components/ui/QueryState";
 import { formatDate, plural } from "@/shared/lib/format";
 import RecipeBody from "../components/RecipeBody";
-import RecipeCover from "../components/RecipeCover";
+import RecipeCover, { PhotoCredit } from "../components/RecipeCover";
 import RecipeFeedback from "../components/RecipeFeedback";
 import ShoppingListDialog from "../components/ShoppingListDialog";
 import { useAdaptRecipe, useMyRecipe, useRecipeMutations } from "../hooks/useRecipes";
 import { chefLink } from "../utils/links";
+import type { PhotoNotSavedState } from "./RecipeEditorPage";
 
 export default function RecipeDetailPage() {
       const { id } = useParams();
       const navigate = useNavigate();
+      const location = useLocation();
+      const photoNotSaved = (location.state as PhotoNotSavedState | null)?.photoNotSaved ?? false;
       const recipe = useMyRecipe(id);
       const adapt = useAdaptRecipe();
       const { publish, unpublish, remove } = useRecipeMutations();
@@ -52,7 +55,16 @@ export default function RecipeDetailPage() {
                   />
 
                   <main className="mx-auto flex max-w-xl flex-col gap-6 px-6 pt-6">
-                        <RecipeCover id={r.id} title={r.title} size="lg" />
+                        {photoNotSaved && (
+                              <p role="status" className="flex items-start gap-3 rounded-control border border-warning bg-card p-4 text-sm text-warning">
+                                    <Icon name="info" className="size-5 shrink-0" />
+                                    La receta se guardó, pero el servidor todavía no guarda fotos. Podrás añadirla cuando esté disponible.
+                              </p>
+                        )}
+                        <div className="flex flex-col gap-2">
+                              <RecipeCover recipe={r} size="lg" />
+                              <PhotoCredit recipe={r} />
+                        </div>
 
                         <div className="flex flex-col gap-1">
                               <p className="inline-flex items-center gap-1 text-sm font-semibold text-ink-muted">
