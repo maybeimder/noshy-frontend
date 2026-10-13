@@ -15,6 +15,8 @@ const RecipeEditorPage = lazy(() => import("@/modules/recipes/pages/RecipeEditor
 const CommunityRecipePage = lazy(() => import("@/modules/recipes/pages/CommunityRecipePage"));
 const ShoppingListPage = lazy(() => import("@/modules/shopping-list/pages/ShoppingListPage"));
 const ProfilePage = lazy(() => import("@/modules/profile/pages/ProfilePage"));
+const GenerateRecipePage = lazy(() => import("@/modules/food/pages/GenerateRecipePage"));
+const GeneratedRecipePage = lazy(() => import("@/modules/food/pages/GeneratedRecipePage"));
 
 export const routes: RouteObject[] = [
       {
@@ -46,6 +48,8 @@ export const routes: RouteObject[] = [
                   { path: "/plan/editar", element: <PlanPage mode="edit" /> },
                   { path: "/recetas/nueva", element: <RecipeEditorPage /> },
                   { path: "/recetas/:id/editar", element: <RecipeEditorPage /> },
+                  { path: "/recetas/generar", element: <GenerateRecipePage /> },
+                  { path: "/recetas/generada/:id", element: <GeneratedRecipePage /> },
             ],
       },
       { path: "*", element: <Navigate to="/" replace /> },

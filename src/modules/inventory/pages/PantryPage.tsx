@@ -1,5 +1,8 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
+import FoodResults from "@/modules/food/components/FoodResults";
+import ProductDialog from "@/modules/food/components/ProductDialog";
+import type { FoodSearchItem } from "@/modules/food/types";
 import PageHeader from "@/shared/components/layout/PageHeader";
 import Button from "@/shared/components/ui/Button";
 import Dialog from "@/shared/components/ui/Dialog";
@@ -27,7 +30,7 @@ const smallIcon =
 
 export default function PantryPage() {
       const inventory = useInventory();
-      const { create, update, remove } = useInventoryMutations();
+      const { create, update, remove, addMany } = useInventoryMutations();
       const [draft, setDraft] = useState<IngredientDraft>(emptyIngredient);
       const [errors, setErrors] = useState<IngredientErrors>({});
       const [editing, setEditing] = useState<InventoryItem | null>(null);
@@ -35,6 +38,22 @@ export default function PantryPage() {
       const [filter, setFilter] = useState<Category | "Todo">("Todo");
       const [searchOpen, setSearchOpen] = useState(false);
       const [search, setSearch] = useState("");
+      // Catalog search (GET /food/products) as the user types the ingredient name.
+      const [product, setProduct] = useState<FoodSearchItem | null>(null);
+      const [addingId, setAddingId] = useState<string | null>(null);
+      const [added, setAdded] = useState<string | null>(null);
+
+      const addFromCatalog = (input: InventoryItemInput, id: string, onDone?: () => void) => {
+            setAddingId(id);
+            addMany.mutate([input], {
+                  onSuccess: () => {
+                        setAdded(`${input.name} · ${formatQuantity(input.quantity, input.unit)}`);
+                        setDraft((d) => ({ ...emptyIngredient(), unit: d.unit }));
+                        onDone?.();
+                  },
+                  onSettled: () => setAddingId(null),
+            });
+      };
 
       const handleAdd = (event: FormEvent) => {
             event.preventDefault();
@@ -92,6 +111,7 @@ export default function PantryPage() {
                                           onChange={(value) => {
                                                 setDraft(value);
                                                 setErrors({});
+                                                setAdded(null);
                                           }}
                                           errors={errors}
                                           trailing={
@@ -110,6 +130,25 @@ export default function PantryPage() {
                                           }
                                     />
                               </form>
+                              {added && (
+                                    <p role="status" className="mt-3 flex items-center gap-2 rounded-control bg-mint-soft p-3 text-sm font-bold text-mint-ink">
+                                          <Icon name="check" className="size-4" strokeWidth={2.5} />
+                                          Añadido: {added}
+                                    </p>
+                              )}
+                              {addMany.error && !product && <p className="mt-3 text-sm font-semibold text-error">{addMany.error.message}</p>}
+                              <div className="mt-3 empty:hidden">
+                                    <FoodResults
+                                          query={draft.name}
+                                          listId="food-results"
+                                          addingId={addingId}
+                                          onQuickAdd={(item) => addFromCatalog({ name: item.name, quantity: item.baseServing.grams, unit: "g" }, item.id)}
+                                          onOpen={(item) => {
+                                                addMany.reset();
+                                                setProduct(item);
+                                          }}
+                                    />
+                              </div>
                         </section>
 
                         {all.length > 0 && (
@@ -178,18 +217,28 @@ export default function PantryPage() {
 
                         {all.length > 0 && (
                               <Link
-                                    to="/chef"
+                                    to="/recetas/generar"
                                     className="group flex items-center gap-3 rounded-card bg-card p-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong"
                               >
                                     <MascotAvatar className="size-14 rounded-control" />
                                     <span className="min-w-0 flex-1">
                                           <span className="block font-display text-base font-bold text-ink">Con esto te hago algo rico</span>
-                                          <span className="block text-sm font-bold text-primary-strong">Pregúntale a Noshy</span>
+                                          <span className="block text-sm font-bold text-primary-strong">Genera una receta con Noshy</span>
                                     </span>
                                     <Icon name="arrowRight" className="size-6 shrink-0 text-ink transition-transform group-hover:translate-x-1" />
                               </Link>
                         )}
                   </main>
+
+                  {product && (
+                        <ProductDialog
+                              item={product}
+                              adding={addingId === product.id}
+                              error={addMany.error?.message}
+                              onAdd={(input) => addFromCatalog(input, product.id, () => setProduct(null))}
+                              onClose={() => setProduct(null)}
+                        />
+                  )}
 
                   {editing && (
                         <EditDialog
