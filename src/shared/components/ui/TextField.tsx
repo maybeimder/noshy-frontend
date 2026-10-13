@@ -1,15 +1,31 @@
-import { useId, useState, type InputHTMLAttributes } from "react";
+import { useId, useState, type InputHTMLAttributes, type ReactNode } from "react";
+import Icon from "./Icon";
 
-type TextFieldProps = Omit<InputHTMLAttributes<HTMLInputElement>, "id"> & {
+type TextFieldProps = Omit<InputHTMLAttributes<HTMLInputElement>, "id" | "size"> & {
       label: string;
+      hideLabel?: boolean;
       error?: string;
       hint?: string;
+      /** Text or node shown inside the field on the right (e.g. "kcal"). */
+      suffix?: ReactNode;
+      /** "field": beige filled (default) · "card": white, for use on beige/peach surfaces. */
+      tone?: "field" | "card";
+      size?: "md" | "lg";
 };
+
+export const fieldClass = (tone: "field" | "card", error?: string) =>
+      `w-full rounded-control text-ink placeholder:text-ink-muted/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong ${
+            tone === "field" ? "bg-field" : "bg-card"
+      } ${error ? "ring-2 ring-error" : ""}`;
 
 export default function TextField({
       label,
+      hideLabel = false,
       error,
       hint,
+      suffix,
+      tone = "field",
+      size = "md",
       type = "text",
       className = "",
       ...props
@@ -17,13 +33,12 @@ export default function TextField({
       const id = useId();
       const [revealed, setRevealed] = useState(false);
       const isPassword = type === "password";
-      const describedBy =
-            [error && `${id}-error`, hint && `${id}-hint`].filter(Boolean).join(" ") ||
-            undefined;
+      const describedBy = [error && `${id}-error`, hint && `${id}-hint`].filter(Boolean).join(" ") || undefined;
+      const padRight = isPassword || suffix ? "pr-14" : "pr-4";
 
       return (
             <div className={`flex flex-col gap-2 ${className}`}>
-                  <label htmlFor={id} className="text-sm font-semibold text-ink">
+                  <label htmlFor={id} className={hideLabel ? "sr-only" : "text-sm font-bold text-ink"}>
                         {label}
                   </label>
 
@@ -33,18 +48,23 @@ export default function TextField({
                               type={isPassword && revealed ? "text" : type}
                               aria-invalid={error ? true : undefined}
                               aria-describedby={describedBy}
-                              className={`min-h-11 w-full rounded-control border bg-card px-4 py-3 text-base text-ink placeholder:text-ink-muted/70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong ${
-                                    error ? "border-2 border-error" : "border-ink-muted"
-                              } ${isPassword ? "pr-12" : ""}`}
+                              className={`${fieldClass(tone, error)} pl-4 ${padRight} ${
+                                    size === "lg" ? "min-h-14 py-3 font-display text-section font-bold" : "min-h-12 py-3 text-base"
+                              }`}
                               {...props}
                         />
+                        {suffix && !isPassword && (
+                              <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-sm font-bold text-ink-muted">
+                                    {suffix}
+                              </span>
+                        )}
                         {isPassword && (
                               <button
                                     type="button"
                                     onClick={() => setRevealed((value) => !value)}
                                     aria-label={revealed ? "Ocultar contraseña" : "Mostrar contraseña"}
                                     aria-pressed={revealed}
-                                    className="absolute inset-y-0 right-0 grid w-11 place-items-center rounded-r-control text-ink-muted hover:text-ink focus-visible:outline-2 focus-visible:outline-primary-strong"
+                                    className="absolute inset-y-0 right-1 grid w-11 place-items-center rounded-control text-ink-muted hover:text-ink focus-visible:outline-2 focus-visible:outline-primary-strong"
                               >
                                     <svg
                                           viewBox="0 0 24 24"
@@ -65,23 +85,14 @@ export default function TextField({
                   </div>
 
                   {hint && !error && (
-                        <p id={`${id}-hint`} className="text-xs text-ink-muted">
+                        <p id={`${id}-hint`} className="flex items-center gap-1.5 text-xs font-semibold text-ink-muted">
+                              <Icon name="info" className="size-4" />
                               {hint}
                         </p>
                   )}
                   {error && (
-                        <p
-                              id={`${id}-error`}
-                              className="flex items-start gap-1 text-sm text-error"
-                        >
-                              <svg
-                                    viewBox="0 0 24 24"
-                                    className="mt-0.5 size-4 shrink-0"
-                                    fill="currentColor"
-                                    aria-hidden
-                              >
-                                    <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-1 5h2v7h-2Zm0 9h2v2h-2Z" />
-                              </svg>
+                        <p id={`${id}-error`} className="flex items-start gap-1 text-sm font-semibold text-error">
+                              <Icon name="alert" className="mt-0.5 size-4 shrink-0" />
                               {error}
                         </p>
                   )}

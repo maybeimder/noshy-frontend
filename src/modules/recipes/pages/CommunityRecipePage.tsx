@@ -8,11 +8,12 @@ import { EmptyState, ErrorState, LoadingState } from "@/shared/components/ui/Que
 import { ApiError } from "@/shared/lib/axios";
 import { formatDate } from "@/shared/lib/format";
 import RecipeBody from "../components/RecipeBody";
-import RecipeCover, { PhotoCredit } from "../components/RecipeCover";
+import { PhotoCredit } from "../components/RecipeCover";
 import RecipeFeedback from "../components/RecipeFeedback";
+import RecipeHero from "../components/RecipeHero";
+import { RecipeQuickActions, RecipeTitle } from "../components/RecipeIntro";
 import ShoppingListDialog from "../components/ShoppingListDialog";
 import { useCommunityRecipe, useRecipeMutations } from "../hooks/useRecipes";
-import { chefLink } from "../utils/links";
 
 export default function CommunityRecipePage() {
       const { id } = useParams();
@@ -27,7 +28,7 @@ export default function CommunityRecipePage() {
             return (
                   <>
                         <PageHeader title="Comunidad" backTo="/recetas?ver=comunidad" />
-                        <main className="mx-auto max-w-xl px-6 pt-6">
+                        <main className="mx-auto max-w-xl px-5 pt-6">
                               {notFound ? (
                                     <EmptyState icon="globe" title="Receta no disponible" description="Su autor dejó de publicarla." />
                               ) : (
@@ -41,44 +42,32 @@ export default function CommunityRecipePage() {
       const r = recipe.data;
       // Adapting and own shopping lists need an own copy; saving one makes that possible.
       const saveCopy = () =>
-            create.mutate(
-                  { title: r.title, ingredients: r.ingredients, instructions: r.instructions },
-                  { onSuccess: (copy) => navigate(`/recetas/${copy.id}`) },
-            );
+            create.mutate({ title: r.title, ingredients: r.ingredients, instructions: r.instructions }, { onSuccess: (copy) => navigate(`/recetas/${copy.id}`) });
 
       return (
             <>
-                  <PageHeader title={r.title} backTo="/recetas?ver=comunidad" />
-                  <main className="mx-auto flex max-w-xl flex-col gap-6 px-6 pt-6">
-                        <div className="flex flex-col gap-2">
-                              <RecipeCover recipe={r} size="lg" />
-                              <PhotoCredit recipe={r} />
-                        </div>
-                        <p className="flex items-center gap-3 text-base text-ink-muted">
-                              <Avatar name={r.authorName ?? "?"} url={r.authorAvatarUrl} size="sm" />
-                              <span>
-                                    Por <strong className="text-ink">{r.authorName ?? "alguien de la comunidad"}</strong>
-                                    {r.publishedAt && ` · ${formatDate(r.publishedAt)}`}
-                              </span>
-                        </p>
+                  <RecipeHero recipe={r} backTo="/recetas?ver=comunidad" />
 
-                        <section aria-label="Acciones" className="flex flex-col gap-2">
-                              <Button fullWidth loading={create.isPending} onClick={saveCopy}>
-                                    <Icon name="book" className="size-5" />
-                                    Guardar en mis recetas
-                              </Button>
-                              <div className="grid grid-cols-2 gap-2">
-                                    <Button variant="secondary" onClick={() => setShoppingOpen(true)}>
-                                          <Icon name="cart" className="size-5" />
-                                          Lista de compras
-                                    </Button>
-                                    <Button variant="secondary" onClick={() => navigate(chefLink(r.id, r.title))}>
-                                          <Icon name="chef" className="size-5" />
-                                          Preguntar al chef
-                                    </Button>
-                              </div>
-                              {create.error && <p className="text-sm text-error">{create.error.message}</p>}
-                        </section>
+                  <main className="relative mx-auto -mt-10 flex max-w-xl flex-col gap-4 rounded-t-[2rem] bg-canvas px-5 pt-6">
+                        <PhotoCredit recipe={r} />
+                        <RecipeTitle
+                              recipe={r}
+                              tag="Comunidad"
+                              chips={
+                                    <li className="inline-flex items-center gap-1.5 rounded-full bg-card py-1 pr-3 pl-1 text-ink">
+                                          <Avatar name={r.authorName ?? "?"} url={r.authorAvatarUrl} size="xs" />
+                                          {r.authorName ?? "Comunidad"}
+                                          {r.publishedAt && <span className="font-semibold text-ink-muted">· {formatDate(r.publishedAt)}</span>}
+                                    </li>
+                              }
+                        />
+
+                        <Button size="lg" fullWidth loading={create.isPending} onClick={saveCopy}>
+                              <Icon name="book" className="size-5" />
+                              Guardar en mis recetas
+                        </Button>
+                        <RecipeQuickActions recipe={r} onShopping={() => setShoppingOpen(true)} />
+                        {create.error && <p className="text-sm text-error">{create.error.message}</p>}
 
                         <RecipeBody ingredients={r.ingredients} instructions={r.instructions} />
                         <RecipeFeedback recipe={r} />

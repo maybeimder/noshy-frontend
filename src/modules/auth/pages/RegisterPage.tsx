@@ -2,11 +2,17 @@ import { useState, type FormEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import Button from "@/shared/components/ui/Button";
+import { Sparkle, Star } from "@/shared/components/ui/Doodles";
 import FormAlert from "@/shared/components/ui/FormAlert";
+import Icon from "@/shared/components/ui/Icon";
+import { Wordmark } from "@/shared/components/ui/Logo";
+import Mascot from "@/shared/components/ui/Mascot";
+import ScribbleText from "@/shared/components/ui/ScribbleText";
+import Sticker from "@/shared/components/ui/Sticker";
 import TextField from "@/shared/components/ui/TextField";
 import { ApiError } from "@/shared/lib/axios";
 import { authApi } from "../api/auth.api";
-import AuthLayout from "../components/AuthLayout";
+import AuthLayout, { authLinkClass } from "../components/AuthLayout";
 import { useAuth } from "../hooks/useAuth";
 import { validateCredentials, type FieldErrors } from "../utils/validation";
 
@@ -54,16 +60,27 @@ export default function RegisterPage() {
 
       return (
             <AuthLayout
-                  title="Crea tu cuenta"
-                  subtitle="Tu chef personal se adapta a tu plan y a tu despensa."
+                  hero={
+                        <div className="relative flex items-center justify-center gap-3 pt-6">
+                              <Sparkle className="absolute top-0 left-2 size-5 text-secondary" />
+                              <Star className="absolute -right-3 bottom-14 size-7 rotate-12 text-primary" />
+                              <Mascot className="w-36 shrink-0" />
+                              <div className="flex flex-col items-start gap-3">
+                                    <Wordmark size="md" align="start" />
+                                    <Sticker tilt={-3}>¡Cocinemos juntos!</Sticker>
+                              </div>
+                        </div>
+                  }
+                  title={
+                        <>
+                              Crea tu <ScribbleText>cuenta</ScribbleText>
+                        </>
+                  }
+                  subtitle="Noshy se adapta a tu plan y a lo que tienes en tu despensa."
                   footer={
                         <>
                               ¿Ya tienes cuenta?{" "}
-                              <Link
-                                    to="/login"
-                                    state={location.state}
-                                    className="font-bold text-ink underline underline-offset-4"
-                              >
+                              <Link to="/login" state={location.state} className={authLinkClass}>
                                     Inicia sesión
                               </Link>
                         </>
@@ -72,14 +89,7 @@ export default function RegisterPage() {
                   <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-4">
                         {formError && <FormAlert>{formError}</FormAlert>}
 
-                        <TextField
-                              label="Nombre"
-                              name="name"
-                              autoComplete="name"
-                              placeholder="Ana"
-                              error={fieldErrors.name}
-                              required
-                        />
+                        <TextField label="Nombre" name="name" autoComplete="name" placeholder="Ana" error={fieldErrors.name} required />
                         <TextField
                               label="Email"
                               name="email"
@@ -95,18 +105,15 @@ export default function RegisterPage() {
                               name="password"
                               type="password"
                               autoComplete="new-password"
-                              hint="Mínimo 8 caracteres."
+                              placeholder="Crea una contraseña"
+                              hint="Mínimo 8 caracteres"
                               error={fieldErrors.password}
                               required
                         />
 
-                        <Button
-                              type="submit"
-                              fullWidth
-                              loading={register.isPending}
-                              className="mt-2"
-                        >
+                        <Button type="submit" size="lg" fullWidth loading={register.isPending} className="mt-2">
                               {register.isPending ? "Creando cuenta…" : "Crear cuenta"}
+                              {!register.isPending && <Icon name="arrowRight" className="size-5" strokeWidth={2.25} />}
                         </Button>
                   </form>
             </AuthLayout>

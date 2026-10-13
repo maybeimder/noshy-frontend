@@ -23,6 +23,19 @@ const paths = {
       info: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0-10v5m0-8h.01",
       copy: "M8 8h12v12H8zM16 8V4H4v12h4",
       bowl: "M3 11h18a9 9 0 0 1-18 0Zm5-3c0-2 1-3 2-4m3 4c0-2 1-3 2-4",
+      trendDown: "M3 7l6 6 4-4 8 8M21 11v6h-6",
+      trendUp: "M3 17l6-6 4 4 8-8M21 13V7h-6",
+      flame: "M12 3c1 4 5 5.5 5 10.5a5 5 0 0 1-10 0c0-2.5 1.5-3.5 2-5.5 1 1 1.6 2 1.8 3C12 9 12.5 6 12 3Z",
+      dumbbell: "M6 7v10M3 10v4M18 7v10M21 10v4M6 12h12",
+      scale: "M12 4v16M8 20h8M5 7h14M5 7l-3 7a3 3 0 0 0 6 0Zm14 0-3 7a3 3 0 0 0 6 0Z",
+      star4: "M12 3c.8 4.5 4.5 8.2 9 9-4.5.8-8.2 4.5-9 9-.8-4.5-4.5-8.2-9-9 4.5-.8 8.2-4.5 9-9Z",
+      camera: "M4 8h3l2-3h6l2 3h3v11H4ZM12 16.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z",
+      clock: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0-13v4l3 2",
+      tag: "M3 12V4h8l10 10-8 8ZM7.5 8.5h.01",
+      search: "M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14Zm5-2 5 5",
+      sliders: "M4 7h10M18 7h2M4 17h4M12 17h8M16 5v4M10 15v4",
+      target: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0-5a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0-3.5h.01",
+      chevronDown: "M6 9l6 6 6-6",
 } as const;
 
 export type IconName = keyof typeof paths;

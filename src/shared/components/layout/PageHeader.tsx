@@ -1,6 +1,9 @@
 import type { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
+import { Sparkle, Star } from "../ui/Doodles";
 import Icon from "../ui/Icon";
+import { roundButtonClass } from "../ui/RoundButton";
+import ScribbleText from "../ui/ScribbleText";
 
 type PageHeaderProps = {
       title: string;
@@ -8,12 +11,15 @@ type PageHeaderProps = {
       /** Where "back" goes when there is no history (e.g. a deep link). */
       backTo?: string;
       actions?: ReactNode;
+      /** Hand-drawn underline under the title (ref: "Mi despensa", "Recetas"). */
+      scribble?: "pink" | "orange";
+      decoration?: "star" | "sparkle";
 };
 
-export const iconButtonClass =
-      "grid size-11 shrink-0 place-items-center rounded-control text-ink transition-colors hover:bg-primary-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong";
+/** Kept for screens that place their own icon buttons in `actions`. */
+export const iconButtonClass = roundButtonClass("card");
 
-export default function PageHeader({ title, subtitle, backTo, actions }: PageHeaderProps) {
+export default function PageHeader({ title, subtitle, backTo, actions, scribble, decoration }: PageHeaderProps) {
       const navigate = useNavigate();
 
       const goBack = () => {
@@ -24,19 +30,21 @@ export default function PageHeader({ title, subtitle, backTo, actions }: PageHea
       };
 
       return (
-            <header className="sticky top-0 z-10 bg-canvas/95 shadow-[0_8px_24px_-16px_rgb(29_9_44/0.25)] backdrop-blur">
-                  <div className="mx-auto flex min-h-16 max-w-xl items-center gap-2 px-4 py-2">
-                        {backTo !== undefined && (
-                              <button type="button" onClick={goBack} aria-label="Volver" className={iconButtonClass}>
-                                    <Icon name="back" />
-                              </button>
-                        )}
-                        <div className={`min-w-0 flex-1 ${backTo === undefined ? "pl-2" : ""}`}>
-                              <h1 className="truncate text-section font-bold text-ink">{title}</h1>
-                              {subtitle && <p className="truncate text-sm text-ink-muted">{subtitle}</p>}
-                        </div>
-                        {actions && <div className="flex shrink-0 items-center gap-1">{actions}</div>}
+            <header className="mx-auto flex max-w-xl items-center gap-3 px-6 pt-6 pb-2">
+                  {backTo !== undefined && (
+                        <button type="button" onClick={goBack} aria-label="Volver" className={roundButtonClass("card")}>
+                              <Icon name="back" />
+                        </button>
+                  )}
+                  <div className="relative min-w-0 flex-1">
+                        <h1 className={`inline-block max-w-full text-[1.75rem] leading-tight font-extrabold text-ink ${scribble ? "pb-2" : "truncate"}`}>
+                              {scribble ? <ScribbleText color={scribble}>{title}</ScribbleText> : title}
+                        </h1>
+                        {decoration === "star" && <Star className="absolute top-0 ml-2 inline size-6 rotate-12 text-primary" />}
+                        {decoration === "sparkle" && <Sparkle className="absolute top-0 ml-2 inline size-4 text-secondary" />}
+                        {subtitle && <p className={`truncate text-sm font-semibold text-ink-muted ${scribble ? "mt-2" : ""}`}>{subtitle}</p>}
                   </div>
+                  {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
             </header>
       );
 }

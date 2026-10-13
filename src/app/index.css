@@ -1,25 +1,64 @@
 @import "tailwindcss";
 
-/* Tokens from DESIGN.md — do not add values outside the design system. */
+/* Tokens from DESIGN.md (incl. the palette sampled from ref/ screens) — do not add values outside it. */
 @theme {
-      /* Palette */
+      /* Brand */
       --color-primary: #e94b97; /* brand.primary */
-      --color-primary-strong: #c52d75; /* functional variant when brand.primary fails 3:1 */
-      --color-primary-soft: #fbe5ef; /* brand.primary.soft */
-      --color-secondary: #e9a178; /* brand.secondary */
-      --color-secondary-soft: #fecdb8; /* brand.secondary.soft */
-      --color-canvas: #fbf4f2; /* surface.canvas */
+      --color-primary-strong: #c9307c; /* brand.primary.strong — buttons, links, active states */
+      --color-primary-soft: #fbdde9; /* brand.primary.soft */
+      --color-secondary: #f2a65a; /* brand.secondary — warm orange */
+      --color-secondary-soft: #f6c9b0; /* brand.secondary.soft — peach cards */
+
+      /* Surfaces and text */
+      --color-canvas: #fbf3ef; /* surface.canvas */
       --color-card: #ffffff; /* surface.card */
-      --color-ink: #1d092c; /* text.primary */
+      --color-field: #f7eee9; /* surface.field — filled inputs */
+      --color-ink: #2b1433; /* text.primary — ciruela */
       --color-ink-muted: #715b77; /* text.secondary */
-      --color-line: #e8dde4; /* border.subtle */
-      --color-success: #217a46; /* status.success */
-      --color-warning: #8a4b16; /* status.warning */
-      --color-error: #b42342; /* status.error */
+      --color-plum: #3a1b44; /* surface.plum — dark feature cards */
+      --color-wine: #5e163b; /* brand.wine — wordmark and mascot line */
+      --color-line: #ebdce3; /* border.subtle */
+
+      /* Status */
+      --color-success: #2e7341; /* status.success */
+      --color-warning: #8e3115; /* status.warning */
+      --color-rust: #8e3115; /* text on peach (greeting, "Para · fecha") */
+      --color-error: #b3261e; /* status.error */
+      --color-online: #2e9b57; /* status.online */
+
+      /* Tone families: soft surface + readable text on it (tiles, chips, macros, categories) */
+      --color-peach-soft: #ffe3d7;
+      --color-peach-ink: #b8401f;
+      --color-rose-soft: #fbdde9;
+      --color-rose-ink: #a42a50;
+      --color-mustard-soft: #fce6b4;
+      --color-mustard-ink: #94600f;
+      --color-sky-soft: #dce7fb;
+      --color-sky-ink: #2754b8;
+      --color-mint-soft: #d7edd5;
+      --color-mint-ink: #2e7341;
+      --color-olive-soft: #efe6cc;
+      --color-olive-ink: #6f5714;
+      --color-lilac-soft: #ebdff7;
+      --color-lilac-ink: #6e44c9;
+      --color-mist-soft: #efe9ec;
+
+      /* Vivid accents: dish illustrations, avatars, recipe colors */
+      --color-tomato: #e4452f;
+      --color-salmon: #e9825f;
+      --color-mustard: #f2b33d;
+      --color-violet: #6e44c9;
+      --color-cobalt: #2f62d0;
+      --color-teal: #1f8a84;
+      --color-leaf: #3f8a5a;
+      --color-cream: #f4e3cf;
+      --color-plate: #fff7f0;
+      --color-noodle: #f6c66b;
 
       /* Typography */
       --font-sans: "Nunito", ui-sans-serif, system-ui, sans-serif;
-      --font-logo: "All Round Gothic", "Nunito", ui-sans-serif, sans-serif;
+      --font-display: "Outfit", "Nunito", ui-sans-serif, sans-serif;
+      --font-logo: "Outfit", "Nunito", ui-sans-serif, sans-serif;
 
       --text-page: 2rem; /* 32 / 40 */
       --text-page--line-height: 2.5rem;
@@ -31,8 +70,8 @@
       --text-metric--line-height: 2.75rem;
 
       /* Radii */
-      --radius-card: 16px;
-      --radius-control: 12px;
+      --radius-card: 24px;
+      --radius-control: 16px;
 }
 
 @layer base {
@@ -45,6 +84,13 @@
       body {
             @apply bg-canvas font-sans text-base text-ink antialiased;
       }
+
+      /* Headings use the geometric display face from the references. */
+      h1,
+      h2,
+      h3 {
+            @apply font-display tracking-tight;
+      }
 }
 
 @utility scrollbar-none {
@@ -53,4 +99,10 @@
       &::-webkit-scrollbar {
             display: none;
       }
+}
+
+/* Hand-drawn "sticker": ink outline with a hard offset shadow (¡Te extrañé!, quick replies). */
+@utility sticker {
+      border: 2px solid var(--color-ink);
+      box-shadow: 3px 3px 0 var(--color-ink);
 }

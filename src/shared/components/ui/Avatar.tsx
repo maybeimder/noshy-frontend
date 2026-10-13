@@ -2,6 +2,7 @@ import { useState } from "react";
 import { imageVariant } from "@/shared/lib/images";
 
 const sizes = {
+      xs: { box: "size-6 text-xs", px: 48 },
       sm: { box: "size-11 text-base", px: 88 },
       md: { box: "size-16 text-section", px: 128 },
       lg: { box: "size-24 text-metric", px: 192 },
