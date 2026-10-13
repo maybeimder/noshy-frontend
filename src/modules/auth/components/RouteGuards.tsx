@@ -1,11 +1,12 @@
 import type { ReactNode } from "react";
-import { Navigate, useLocation } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import SplashScreen from "./SplashScreen";
 
 export type RedirectState = { from?: string };
 
-export function ProtectedRoute({ children }: { children: ReactNode }) {
+// Usable as a wrapper or as a layout route (renders <Outlet /> without children).
+export function ProtectedRoute({ children }: { children?: ReactNode }) {
       const { status } = useAuth();
       const location = useLocation();
 
@@ -16,11 +17,11 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
             };
             return <Navigate to="/login" replace state={state} />;
       }
-      return children;
+      return children ?? <Outlet />;
 }
 
 // Login and register are pointless once signed in.
-export function GuestOnlyRoute({ children }: { children: ReactNode }) {
+export function GuestOnlyRoute({ children }: { children?: ReactNode }) {
       const { status } = useAuth();
       const location = useLocation();
 
@@ -29,5 +30,5 @@ export function GuestOnlyRoute({ children }: { children: ReactNode }) {
             const from = (location.state as RedirectState | null)?.from;
             return <Navigate to={from ?? "/"} replace />;
       }
-      return children;
+      return children ?? <Outlet />;
 }

@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import Button from "@/shared/components/ui/Button";
 import FormAlert from "@/shared/components/ui/FormAlert";
@@ -13,11 +13,16 @@ import { validateCredentials, type FieldErrors } from "../utils/validation";
 export default function RegisterPage() {
       const { startSession } = useAuth();
       const location = useLocation();
+      const navigate = useNavigate();
       const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
       const register = useMutation({
             mutationFn: authApi.register,
-            onSuccess: startSession,
+            // New accounts go straight to the plan onboarding.
+            onSuccess: (auth) => {
+                  startSession(auth);
+                  navigate("/plan/nuevo", { replace: true });
+            },
             onError: (error) => {
                   if (!(error instanceof ApiError)) return;
                   if (error.code === "USER_ALREADY_EXISTS") {

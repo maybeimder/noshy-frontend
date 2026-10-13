@@ -1,31 +1,19 @@
 import { Suspense } from "react";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
-import { GuestOnlyRoute, ProtectedRoute } from "@/modules/auth/components/RouteGuards";
+import { BrowserRouter, useRoutes } from "react-router-dom";
 import SplashScreen from "@/modules/auth/components/SplashScreen";
 import Providers from "./providers";
-import { routes, type RouteAccess } from "./routes";
+import { routes } from "./routes";
 
-const guard = (access: RouteAccess, element: React.ReactElement) => {
-      if (access === "private") return <ProtectedRoute>{element}</ProtectedRoute>;
-      if (access === "guest") return <GuestOnlyRoute>{element}</GuestOnlyRoute>;
-      return element;
-};
+function AppRoutes() {
+      return useRoutes(routes);
+}
 
 export default function App() {
       return (
             <Providers>
                   <BrowserRouter>
                         <Suspense fallback={<SplashScreen />}>
-                              <Routes>
-                                    {routes.map(({ path, element, access }) => (
-                                          <Route
-                                                key={path}
-                                                path={path}
-                                                element={guard(access, element)}
-                                          />
-                                    ))}
-                                    <Route path="*" element={<Navigate to="/" replace />} />
-                              </Routes>
+                              <AppRoutes />
                         </Suspense>
                   </BrowserRouter>
             </Providers>

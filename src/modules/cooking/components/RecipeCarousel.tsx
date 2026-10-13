@@ -1,16 +1,14 @@
-import type { Recipe } from "../types";
+import type { Recipe } from "@/modules/recipes/types";
 import RecipeCard from "./RecipeCard";
 
 type RecipeCarouselProps = {
       recipes: Recipe[];
       labelledBy: string;
+      linkTo: (recipe: Recipe) => string;
 };
 
 // Cards stop short of the padded viewport so the next one peeks in from the edge.
-export default function RecipeCarousel({
-      recipes,
-      labelledBy,
-}: RecipeCarouselProps) {
+export default function RecipeCarousel({ recipes, labelledBy, linkTo }: RecipeCarouselProps) {
       return (
             <ul
                   aria-labelledby={labelledBy}
@@ -18,7 +16,7 @@ export default function RecipeCarousel({
             >
                   {recipes.map((recipe) => (
                         <li key={recipe.id} className="w-[calc(100%-1rem)] shrink-0 snap-start">
-                              <RecipeCard recipe={recipe} />
+                              <RecipeCard recipe={recipe} to={linkTo(recipe)} />
                         </li>
                   ))}
                   {/* Flex scrollers drop trailing padding; this restores it. */}

@@ -25,8 +25,8 @@
       --text-page--line-height: 2.5rem;
       --text-section: 1.5rem; /* 24 / 32 */
       --text-section--line-height: 2rem;
-      --text-card: 1.125rem; /* 18 / 24 */
-      --text-card--line-height: 1.5rem;
+      --text-title: 1.125rem; /* 18 / 24 — título de tarjeta (not "card": that name is the white color) */
+      --text-title--line-height: 1.5rem;
       --text-metric: 2.25rem; /* 36 / 44 */
       --text-metric--line-height: 2.75rem;
 
