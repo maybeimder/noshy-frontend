@@ -15,7 +15,7 @@ export function ProtectedRoute({ children }: { children?: ReactNode }) {
             const state: RedirectState = {
                   from: location.pathname + location.search,
             };
-            return <Navigate to="/login" replace state={state} />;
+            return <Navigate to="/bienvenida" replace state={state} />;
       }
       return children ?? <Outlet />;
 }

@@ -1,15 +1,8 @@
 import { useState, type FormEvent } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
-import Button from "@/shared/components/ui/Button";
 import Dialog from "@/shared/components/ui/Dialog";
-import { Sparkle, Star } from "@/shared/components/ui/Doodles";
 import FormAlert from "@/shared/components/ui/FormAlert";
-import Icon from "@/shared/components/ui/Icon";
-import { Wordmark } from "@/shared/components/ui/Logo";
-import Mascot from "@/shared/components/ui/Mascot";
-import ScribbleText from "@/shared/components/ui/ScribbleText";
-import Sticker from "@/shared/components/ui/Sticker";
 import TextField from "@/shared/components/ui/TextField";
 import { ApiError } from "@/shared/lib/axios";
 import { authApi } from "../api/auth.api";
@@ -55,67 +48,47 @@ export default function LoginPage() {
 
       return (
             <AuthLayout
-                  hero={
-                        <div className="relative flex flex-col items-center pt-4">
-                              <Star className="absolute top-8 left-4 size-9 -rotate-12 text-primary" />
-                              <Sparkle className="absolute top-40 left-12 size-5 text-primary-strong" />
-                              <div className="relative">
-                                    <Mascot className="w-52" />
-                                    <Sticker tilt={3} className="absolute top-0 -right-20">
-                                          ¡Te extrañé!
-                                    </Sticker>
-                              </div>
-                              <div className="mt-2">
-                                    <Wordmark />
-                              </div>
-                        </div>
-                  }
-                  title={
-                        <>
-                              Hola de <ScribbleText color="orange">nuevo</ScribbleText>
-                        </>
-                  }
-                  subtitle="Entra para seguir cocinando con Noshy."
+                  bubble={{ title: "¡Te extrañé! ¿Seguimos cocinando?", text: "Entra con tu correo para volver a tu cocina." }}
+                  onSubmit={handleSubmit}
+                  submitLabel={login.isPending ? "Entrando…" : "Iniciar sesión"}
+                  submitting={login.isPending}
                   footer={
-                        <>
+                        <span className="text-sm">
                               ¿No tienes cuenta?{" "}
                               <Link to="/registro" state={location.state} className={authLinkClass}>
-                                    Regístrate
+                                    Crea tu chef
                               </Link>
-                        </>
+                        </span>
                   }
             >
-                  <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-4">
-                        {formError && <FormAlert>{formError}</FormAlert>}
+                  {formError && <FormAlert>{formError}</FormAlert>}
 
-                        <TextField
-                              label="Email"
-                              name="email"
-                              type="email"
-                              autoComplete="email"
-                              inputMode="email"
-                              placeholder="ana@correo.com"
-                              error={fieldErrors.email}
-                              required
-                        />
-                        <TextField
-                              label="Contraseña"
-                              name="password"
-                              type="password"
-                              autoComplete="current-password"
-                              placeholder="Tu contraseña"
-                              error={fieldErrors.password}
-                              required
-                        />
-                        <button type="button" onClick={() => setForgotOpen(true)} className={`${authLinkClass} self-end text-sm`}>
-                              ¿Olvidaste tu contraseña?
-                        </button>
-
-                        <Button type="submit" size="lg" fullWidth loading={login.isPending} className="mt-2">
-                              {login.isPending ? "Entrando…" : "Iniciar sesión"}
-                              {!login.isPending && <Icon name="arrowRight" className="size-5" strokeWidth={2.25} />}
-                        </Button>
-                  </form>
+                  <TextField
+                        label="Correo electrónico"
+                        name="email"
+                        type="email"
+                        icon="mail"
+                        tone="outline"
+                        autoComplete="email"
+                        inputMode="email"
+                        placeholder="tu@correo.com"
+                        error={fieldErrors.email}
+                        required
+                  />
+                  <TextField
+                        label="Contraseña"
+                        name="password"
+                        type="password"
+                        icon="lock"
+                        tone="outline"
+                        autoComplete="current-password"
+                        placeholder="Tu contraseña"
+                        error={fieldErrors.password}
+                        required
+                  />
+                  <button type="button" onClick={() => setForgotOpen(true)} className={`${authLinkClass} self-end text-sm`}>
+                        ¿Olvidaste tu contraseña?
+                  </button>
 
                   <Dialog open={forgotOpen} onClose={() => setForgotOpen(false)} title="Recuperar contraseña">
                         <p className="text-ink-muted">

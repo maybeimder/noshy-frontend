@@ -3,6 +3,7 @@ import { Navigate, type RouteObject } from "react-router-dom";
 import { GuestOnlyRoute, ProtectedRoute } from "@/modules/auth/components/RouteGuards";
 import AppShell from "@/shared/components/layout/AppShell";
 
+const WelcomePage = lazy(() => import("@/modules/auth/pages/WelcomePage"));
 const LoginPage = lazy(() => import("@/modules/auth/pages/LoginPage"));
 const RegisterPage = lazy(() => import("@/modules/auth/pages/RegisterPage"));
 const HomePage = lazy(() => import("@/modules/cooking/pages/HomePage"));
@@ -23,6 +24,7 @@ export const routes: RouteObject[] = [
       {
             element: <GuestOnlyRoute />,
             children: [
+                  { path: "/bienvenida", element: <WelcomePage /> },
                   { path: "/login", element: <LoginPage /> },
                   { path: "/registro", element: <RegisterPage /> },
             ],

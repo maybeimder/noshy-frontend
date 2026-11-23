@@ -1,5 +1,5 @@
 import { useId, useState, type InputHTMLAttributes, type ReactNode } from "react";
-import Icon from "./Icon";
+import Icon, { type IconName } from "./Icon";
 
 type TextFieldProps = Omit<InputHTMLAttributes<HTMLInputElement>, "id" | "size"> & {
       label: string;
@@ -8,15 +8,25 @@ type TextFieldProps = Omit<InputHTMLAttributes<HTMLInputElement>, "id" | "size">
       hint?: string;
       /** Text or node shown inside the field on the right (e.g. "kcal"). */
       suffix?: ReactNode;
-      /** "field": beige filled (default) · "card": white, for use on beige/peach surfaces. */
-      tone?: "field" | "card";
+      /** "field": beige filled (default) · "card": white, for beige/peach surfaces · "outline": white with a
+       * border that turns pink and blushes once filled (sign-up). */
+      tone?: "field" | "card" | "outline";
       size?: "md" | "lg";
+      /** Leading icon inside the field (smile, mail, lock). */
+      icon?: IconName;
 };
 
-export const fieldClass = (tone: "field" | "card", error?: string) =>
-      `w-full rounded-control text-ink placeholder:text-ink-muted/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong ${
-            tone === "field" ? "bg-field" : "bg-card"
-      } ${error ? "ring-2 ring-error" : ""}`;
+const toneClass = {
+      field: "bg-field",
+      card: "bg-card",
+      outline:
+            "border-2 border-line bg-card font-bold shadow-soft focus-visible:border-primary not-placeholder-shown:border-primary not-placeholder-shown:bg-picked",
+};
+
+export const fieldClass = (tone: keyof typeof toneClass, error?: string) =>
+      `w-full rounded-control text-ink placeholder:font-normal placeholder:text-ink-muted/70 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong ${toneClass[tone]} ${
+            error ? "ring-2 ring-error" : ""
+      }`;
 
 export default function TextField({
       label,
@@ -26,6 +36,7 @@ export default function TextField({
       suffix,
       tone = "field",
       size = "md",
+      icon,
       type = "text",
       className = "",
       ...props
@@ -43,12 +54,18 @@ export default function TextField({
                   </label>
 
                   <div className="relative">
+                        {icon && (
+                              <Icon
+                                    name={icon}
+                                    className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-ink-muted"
+                              />
+                        )}
                         <input
                               id={id}
                               type={isPassword && revealed ? "text" : type}
                               aria-invalid={error ? true : undefined}
                               aria-describedby={describedBy}
-                              className={`${fieldClass(tone, error)} pl-4 ${padRight} ${
+                              className={`${fieldClass(tone, error)} ${icon ? "pl-12" : "pl-4"} ${padRight} ${
                                     size === "lg" ? "min-h-14 py-3 font-display text-section font-bold" : "min-h-12 py-3 text-base"
                               }`}
                               {...props}

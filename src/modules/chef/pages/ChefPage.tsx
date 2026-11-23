@@ -3,11 +3,12 @@ import { Link, useSearchParams } from "react-router-dom";
 import { describeFeedback } from "@/modules/feedback/utils/labels";
 import type { FeedbackEntry } from "@/modules/feedback/types";
 import type { Recipe } from "@/modules/recipes/types";
+import { buttonBase, buttonVariants } from "@/shared/components/ui/Button";
 import DishCover from "@/shared/components/ui/DishArt";
-import { Sparkle, Star, Steam } from "@/shared/components/ui/Doodles";
 import Icon from "@/shared/components/ui/Icon";
-import Mascot from "@/shared/components/ui/Mascot";
-import { MascotAvatar } from "@/shared/components/ui/MascotBubble";
+import { BrandRing, MascotAvatar } from "@/shared/components/ui/MascotBubble";
+import { MarkerText } from "@/shared/components/ui/ScribbleText";
+import { imageVariant } from "@/shared/lib/images";
 import { ErrorState, LoadingState } from "@/shared/components/ui/QueryState";
 import { ApiError } from "@/shared/lib/axios";
 import ChefMarkdown from "../components/ChefMarkdown";
@@ -16,10 +17,10 @@ import { useChefSession } from "../hooks/useChefSession";
 
 const suggestions = ["¿Qué puedo cocinar con lo que tengo?", "Una cena rápida y alta en proteína", "Ideas para no desperdiciar mis verduras"];
 // Quick replies under an ongoing conversation (ref/Tu chef.png).
-const quickReplies = ["¡Vamos!", "Otra idea", "¿Qué me falta?"];
+const quickReplies = ["Otra idea", "¿Qué compro?", "Más proteína", "Algo más rápido"];
 
-const stickerPill =
-      "sticker inline-flex min-h-10 shrink-0 items-center rounded-full bg-card px-4 text-sm font-extrabold text-ink hover:bg-field focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong disabled:opacity-60";
+const replyPill =
+      "inline-flex min-h-11 shrink-0 items-center rounded-full border-2 border-line bg-card px-4 text-sm font-extrabold text-ink hover:border-primary/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong disabled:opacity-60";
 
 const sendErrorMessage = (error: Error) => {
       if (!(error instanceof ApiError)) return error.message;
@@ -71,28 +72,32 @@ export default function ChefPage() {
 
       return (
             <>
-                  <header className="relative mx-auto max-w-xl rounded-b-[2rem] bg-card px-5 pt-6 pb-5 shadow-[0_12px_32px_-24px_rgb(43_20_51/0.45)]">
-                        <Star className="absolute top-4 left-[52%] size-6 rotate-12 text-primary" />
-                        <Sparkle className="absolute top-3 left-[62%] size-4 text-primary-strong" />
+                  <header className="sticky top-0 z-10 mx-auto max-w-xl rounded-b-card bg-card/95 px-5 pt-6 pb-4 shadow-soft backdrop-blur">
                         <div className="flex items-center gap-3">
-                              <MascotAvatar className="size-16" />
+                              <BrandRing className="size-14">
+                                    <MascotAvatar tone="white" className="size-full" />
+                              </BrandRing>
                               <div className="min-w-0 flex-1">
-                                    <h1 className="text-[1.75rem] leading-tight font-extrabold text-ink">Noshy</h1>
-                                    <p className="flex items-start gap-1.5 text-sm font-bold text-ink-muted">
-                                          <span aria-hidden className="mt-1.5 size-2 shrink-0 rounded-full bg-online" />
-                                          Tu chef · conoce tu plan y tu despensa
+                                    <h1 className="text-[1.75rem] leading-tight font-extrabold text-ink">
+                                          <MarkerText>Tu chef</MarkerText>
+                                    </h1>
+                                    <p className="flex items-center gap-1.5 text-sm font-semibold text-ink-muted">
+                                          <span aria-hidden className="size-2 shrink-0 rounded-full bg-online" />
+                                          Conoce tu despensa y tus metas
                                     </p>
                               </div>
                               {sessionId && (
                                     <button
                                           type="button"
+                                          aria-label="Terminar y guardar lo aprendido"
+                                          title="Terminar y guardar lo aprendido"
                                           onClick={() => {
                                                 close.reset();
                                                 setCloseOpen(true);
                                           }}
-                                          className="min-h-10 shrink-0 rounded-full bg-field px-4 text-sm font-extrabold text-ink hover:bg-line focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong"
+                                          className="grid size-12 shrink-0 place-items-center rounded-full bg-primary-soft text-primary-strong hover:bg-rose-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong"
                                     >
-                                          Terminar
+                                          <Icon name="sliders" />
                                     </button>
                               )}
                         </div>
@@ -105,7 +110,9 @@ export default function ChefPage() {
                               <ErrorState message={context.error.message} onRetry={() => context.refetch()} />
                         ) : messages.length === 0 ? (
                               <section className="flex flex-col items-center gap-4 py-4 text-center">
-                                    <Mascot className="w-36" />
+                                    <BrandRing className="size-32 p-1">
+                                          <MascotAvatar tone="white" className="size-full" />
+                                    </BrandRing>
                                     <h2 className="text-section font-extrabold text-ink">¿Qué cocinamos hoy?</h2>
                                     <p className="text-base text-ink-muted">Pregúntame lo que quieras: adapto recetas a tus metas, restricciones y a lo que tienes en casa.</p>
                                     <ul className="flex w-full flex-col gap-2">
@@ -114,7 +121,7 @@ export default function ChefPage() {
                                                       <button
                                                             type="button"
                                                             onClick={() => submit(suggestion)}
-                                                            className="flex min-h-12 w-full items-center justify-between gap-2 rounded-card bg-card px-4 py-3 text-left text-sm font-bold text-ink hover:bg-field focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong"
+                                                            className="flex min-h-12 w-full items-center justify-between gap-2 rounded-card bg-card px-4 py-3 text-left text-sm font-bold text-ink shadow-soft hover:bg-field focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong"
                                                       >
                                                             {suggestion}
                                                             <Icon name="arrowRight" className="size-5 shrink-0 text-primary-strong" />
@@ -132,13 +139,13 @@ export default function ChefPage() {
                                                 <li key={message.id} className={`flex flex-col gap-2 ${mine ? "items-end" : "items-start"}`}>
                                                       <span className="sr-only">{mine ? "Tú:" : "Noshy:"}</span>
                                                       {mine ? (
-                                                            <p className="max-w-[80%] rounded-[1.25rem] rounded-br-md bg-primary-strong px-4 py-3 font-bold whitespace-pre-wrap text-card">
+                                                            <p className="max-w-[80%] rounded-[1.25rem] rounded-br-md bg-brand px-4 py-3 font-bold whitespace-pre-wrap text-card shadow-brand">
                                                                   {message.content}
                                                             </p>
                                                       ) : (
                                                             <div className="flex max-w-[90%] items-start gap-2">
-                                                                  <MascotAvatar className="mt-1 size-9" />
-                                                                  <div className="rounded-[1.25rem] rounded-tl-md bg-card px-4 py-3 text-base text-ink">
+                                                                  <MascotAvatar tone="blush" className="mt-1 size-9" />
+                                                                  <div className="rounded-[1.25rem] rounded-tl-md bg-card px-4 py-3 text-base text-ink shadow-soft">
                                                                         <ChefMarkdown>{message.content}</ChefMarkdown>
                                                                   </div>
                                                             </div>
@@ -147,9 +154,9 @@ export default function ChefPage() {
                                                       {feedback.length > 0 && (
                                                             <ul aria-label="Lo que Noshy registró" className="ml-11 flex flex-wrap gap-2">
                                                                   {feedback.map((entry) => (
-                                                                        <li key={entry.id} className="inline-flex items-center gap-1 rounded-full bg-mint-soft px-3 py-1 text-xs font-bold text-mint-ink">
+                                                                        <li key={entry.id} className="inline-flex items-center gap-1.5 rounded-full border-2 border-dashed border-lilac-ink/30 bg-lilac-soft px-3 py-1 text-xs font-bold text-lilac-ink">
                                                                               <Icon name="sparkle" className="size-3.5" />
-                                                                              {describeFeedback(entry.eventType, entry.targetName)}
+                                                                              Aprendí: {describeFeedback(entry.eventType, entry.targetName)}
                                                                         </li>
                                                                   ))}
                                                             </ul>
@@ -159,14 +166,14 @@ export default function ChefPage() {
                                     })}
                                     {send.isPending && (
                                           <li className="flex items-start gap-2">
-                                                <MascotAvatar className="mt-1 size-9" />
-                                                <p role="status" className="flex items-center gap-2 rounded-[1.25rem] rounded-tl-md bg-card px-4 py-3 text-sm font-semibold text-ink-muted">
+                                                <MascotAvatar tone="blush" className="mt-1 size-9" />
+                                                <p role="status" className="flex items-center gap-2 rounded-[1.25rem] rounded-tl-md bg-card px-4 py-3 text-sm font-semibold text-ink-muted shadow-soft">
                                                       <span aria-hidden className="flex gap-1">
                                                             <span className="size-2 animate-bounce rounded-full bg-primary-strong" />
                                                             <span className="size-2 animate-bounce rounded-full bg-primary-strong [animation-delay:150ms]" />
                                                             <span className="size-2 animate-bounce rounded-full bg-primary-strong [animation-delay:300ms]" />
                                                       </span>
-                                                      Noshy está pensando…
+                                                      Tu chef está pensando…
                                                 </p>
                                           </li>
                                     )}
@@ -201,13 +208,13 @@ export default function ChefPage() {
                               {messages.length > 0 && (
                                     <div className="scrollbar-none -mx-4 flex gap-3 overflow-x-auto px-4 pt-1 pb-1">
                                           {quickReplies.map((reply) => (
-                                                <button key={reply} type="button" disabled={send.isPending} onClick={() => submit(reply)} className={stickerPill}>
+                                                <button key={reply} type="button" disabled={send.isPending} onClick={() => submit(reply)} className={replyPill}>
                                                       {reply}
                                                 </button>
                                           ))}
                                     </div>
                               )}
-                              <form onSubmit={handleSubmit} className="flex items-end gap-2 rounded-[1.75rem] bg-card p-2 pl-5 shadow-[0_10px_28px_-16px_rgb(43_20_51/0.45)]">
+                              <form onSubmit={handleSubmit} className="flex items-end gap-2 rounded-[1.75rem] border-2 border-line bg-card p-1.5 pl-5 shadow-[0_10px_28px_-16px_rgb(43_20_51/0.45)] focus-within:border-primary/50">
                                     <label htmlFor="chef-message" className="sr-only">
                                           Mensaje para Noshy
                                     </label>
@@ -216,7 +223,7 @@ export default function ChefPage() {
                                           rows={1}
                                           value={draft}
                                           maxLength={10_000}
-                                          placeholder="Escríbele a Noshy..."
+                                          placeholder="Pregúntale al chef…"
                                           onChange={(e) => setDraft(e.target.value)}
                                           onKeyDown={(e) => {
                                                 if (e.key === "Enter" && !e.shiftKey) {
@@ -230,7 +237,7 @@ export default function ChefPage() {
                                           type="submit"
                                           aria-label="Enviar"
                                           disabled={!draft.trim() || send.isPending}
-                                          className="grid size-12 shrink-0 place-items-center rounded-full bg-primary-strong text-card hover:bg-primary-strong/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong disabled:cursor-not-allowed disabled:opacity-50"
+                                          className="grid size-12 shrink-0 place-items-center rounded-full bg-brand text-card shadow-brand hover:brightness-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                           <Icon name="send" className="size-5" />
                                     </button>
@@ -262,32 +269,39 @@ export default function ChefPage() {
 
 /** Recipe the chef saved for you, as a card in the conversation. */
 function SavedRecipeCard({ recipe }: { recipe: Recipe }) {
+      const facts = [
+            [recipe.ingredients.length, recipe.ingredients.length === 1 ? "ingrediente" : "ingredientes", "bg-peach-soft text-peach-ink"],
+            [recipe.instructions.length, recipe.instructions.length === 1 ? "paso" : "pasos", "bg-rose-soft text-rose-ink"],
+      ] as const;
       return (
-            <Link
-                  to={`/recetas/${recipe.id}`}
-                  className="group ml-11 block w-[80%] overflow-hidden rounded-card bg-card shadow-[0_10px_24px_-18px_rgb(43_20_51/0.5)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong"
-            >
-                  <div className="relative h-28">
-                        <DishCover seed={recipe.id} className="size-full" />
-                        <Steam className="absolute top-8 left-6 size-6 text-plate/80" />
-                        <span className="absolute top-2 right-2 inline-flex rotate-3 items-center gap-1 rounded-control bg-mustard px-2 py-1 font-display text-xs font-extrabold text-ink">
-                              <Icon name="check" className="size-3.5" strokeWidth={3} />
+            <article className="ml-11 w-[85%] overflow-hidden rounded-card bg-card shadow-[0_16px_32px_-20px_rgb(43_20_51/0.6)]">
+                  <div className="relative h-36 bg-plum">
+                        {recipe.imageUrl ? (
+                              <img src={imageVariant(recipe.imageUrl, 560, 288)} alt="" className="size-full object-cover" />
+                        ) : (
+                              <DishCover seed={recipe.id} className="size-full" />
+                        )}
+                        <span aria-hidden className="absolute inset-0 bg-[linear-gradient(180deg,transparent_35%,rgb(29_9_44/0.85)_100%)]" />
+                        <span className="absolute top-3 left-3 inline-flex items-center gap-1 rounded-full bg-card/90 px-2.5 py-1 text-xs font-extrabold text-ink">
+                              <Icon name="check" className="size-3.5 text-mint-ink" strokeWidth={3} />
                               Guardada
                         </span>
+                        <h3 className="absolute right-4 bottom-3 left-4 font-display text-title leading-tight font-extrabold text-card">{recipe.title}</h3>
                   </div>
-                  <div className="flex flex-col gap-3 p-4">
-                        <h3 className="font-display text-title leading-tight font-extrabold text-ink">{recipe.title}</h3>
+                  <div className="flex flex-col gap-3 p-3">
                         <div className="grid grid-cols-2 gap-2 text-center">
-                              <span className="rounded-control bg-peach-soft p-2">
-                                    <span className="block font-display text-title font-extrabold text-peach-ink">{recipe.ingredients.length}</span>
-                                    <span className="text-xs font-bold text-peach-ink">{recipe.ingredients.length === 1 ? "ingrediente" : "ingredientes"}</span>
-                              </span>
-                              <span className="rounded-control bg-rose-soft p-2">
-                                    <span className="block font-display text-title font-extrabold text-rose-ink">{recipe.instructions.length}</span>
-                                    <span className="text-xs font-bold text-rose-ink">{recipe.instructions.length === 1 ? "paso" : "pasos"}</span>
-                              </span>
+                              {facts.map(([value, label, tone]) => (
+                                    <span key={label} className={`rounded-control p-2 ${tone}`}>
+                                          <span className="block font-display text-title font-extrabold">{value}</span>
+                                          <span className="text-xs font-bold">{label}</span>
+                                    </span>
+                              ))}
                         </div>
+                        <Link to={`/recetas/${recipe.id}`} className={`${buttonBase} ${buttonVariants.primary} min-h-12 text-sm`}>
+                              <Icon name="chef" className="size-5" />
+                              Cocinar
+                        </Link>
                   </div>
-            </Link>
+            </article>
       );
 }

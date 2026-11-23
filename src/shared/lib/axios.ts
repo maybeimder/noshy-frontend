@@ -13,11 +13,12 @@ type ValidationIssue = {
 //   { code, message }                 — domain errors (409, 401, 503…)
 //   { message, issues }               — zod validation (400)
 //   { error: { code, message } }      — unknown route, bad JSON, 500
+//   { error: { code, message, details: [{ field, message }] } } — /api/v1 validation
 type ErrorBody = {
       code?: string;
       message?: string;
       issues?: ValidationIssue[];
-      error?: { code?: string; message?: string };
+      error?: { code?: string; message?: string; details?: { field?: string; message: string }[] };
 };
 
 export class ApiError extends Error {
@@ -52,6 +53,9 @@ function toApiError(error: unknown): ApiError {
             if (field !== undefined && !(String(field) in fieldErrors)) {
                   fieldErrors[String(field)] = issue.message;
             }
+      }
+      for (const detail of data?.error?.details ?? []) {
+            if (detail.field && !(detail.field in fieldErrors)) fieldErrors[detail.field] = detail.message;
       }
 
       return new ApiError(

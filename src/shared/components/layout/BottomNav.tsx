@@ -1,55 +1,64 @@
-import { NavLink } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import Icon, { type IconName } from "../ui/Icon";
+import { MascotAvatar } from "../ui/MascotBubble";
 
-const items: { to: string; label: string; icon: IconName; end?: boolean }[] = [
+type Item = { to: string; label: string; icon?: IconName; end?: boolean; match?: (path: string, search: string) => boolean };
+
+// "Mi cocina" covers the pantry and the shopping list; "Comunidad" is the community tab of recipes.
+const items: Item[] = [
       { to: "/", label: "Inicio", icon: "home", end: true },
-      { to: "/despensa", label: "Despensa", icon: "pantry" },
-      { to: "/chef", label: "Chef", icon: "chef" },
-      { to: "/recetas", label: "Recetas", icon: "book" },
+      { to: "/despensa", label: "Mi cocina", icon: "kitchen", match: (path) => path.startsWith("/despensa") || path.startsWith("/compras") },
+      { to: "/chef", label: "Tu chef" },
+      {
+            to: "/recetas?ver=comunidad",
+            label: "Comunidad",
+            icon: "community",
+            match: (path, search) => path.startsWith("/comunidad") || (path.startsWith("/recetas") && search.includes("ver=comunidad")),
+      },
       { to: "/perfil", label: "Perfil", icon: "user" },
 ];
 
+const linkFocus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong";
+
 // Fixed bars on tab screens sit at bottom-24 or higher to clear this nav (h-16 + 1rem gap).
-// Floating pill with the chef as the raised centre action.
+// White pill; the chef (the Noshy logo) rises from the centre in a pink ring.
 export default function BottomNav() {
+      const { pathname, search } = useLocation();
+
       return (
             <nav
                   aria-label="Principal"
                   className="fixed inset-x-4 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-20 mx-auto max-w-xl rounded-full bg-card shadow-[0_12px_32px_-12px_rgb(29_9_44/0.35)]"
             >
                   <ul className="flex h-16 items-center justify-around px-2">
-                        {items.map(({ to, label, icon, end }) => {
-                              const center = icon === "chef";
+                        {items.map(({ to, label, icon, end, match }) => {
+                              if (!icon) {
+                                    return (
+                                          <li key={to} className="flex flex-1 justify-center">
+                                                <Link
+                                                      to={to}
+                                                      aria-label={label}
+                                                      className={`-mt-9 grid size-[4.5rem] place-items-center rounded-full bg-brand p-1 shadow-brand ring-4 ring-canvas transition-transform hover:scale-105 ${linkFocus}`}
+                                                >
+                                                      <MascotAvatar tone="white" className="size-full" />
+                                                </Link>
+                                          </li>
+                                    );
+                              }
+                              const active = match ? match(pathname, search) : end ? pathname === to : pathname.startsWith(to);
                               return (
                                     <li key={to} className="flex flex-1 justify-center">
-                                          <NavLink
+                                          <Link
                                                 to={to}
-                                                end={end}
-                                                aria-label={center ? label : undefined}
-                                                className={({ isActive }) =>
-                                                      center
-                                                            ? "-mt-10 grid size-16 place-items-center rounded-full bg-primary-strong text-card shadow-[0_8px_24px_-4px_rgb(201_48_124/0.7)] ring-4 ring-canvas transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-strong"
-                                                            : `flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 rounded-control text-xs focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong ${
-                                                                    isActive ? "font-bold text-ink" : "text-ink-muted"
-                                                              }`
-                                                }
+                                                aria-current={active ? "page" : undefined}
+                                                className={`flex min-h-11 min-w-11 flex-col items-center justify-center gap-0.5 rounded-control text-xs ${linkFocus} ${
+                                                      active ? "font-extrabold text-primary-strong" : "font-semibold text-ink-muted"
+                                                }`}
                                           >
-                                                {({ isActive }) =>
-                                                      center ? (
-                                                            <Icon name="chef" className="size-8" strokeWidth={isActive ? 2.25 : 1.75} />
-                                                      ) : (
-                                                            <>
-                                                                  {/* Active: pink icon + heavier stroke + bold label, never color alone. */}
-                                                                  <Icon
-                                                                        name={icon}
-                                                                        className={`size-6 ${isActive ? "text-primary-strong" : ""}`}
-                                                                        strokeWidth={isActive ? 2.25 : 1.75}
-                                                                  />
-                                                                  {label}
-                                                            </>
-                                                      )
-                                                }
-                                          </NavLink>
+                                                {/* Active: pink icon + heavier stroke + bold label, never color alone. */}
+                                                <Icon name={icon} className="size-6" strokeWidth={active ? 2.25 : 1.75} />
+                                                {label}
+                                          </Link>
                                     </li>
                               );
                         })}

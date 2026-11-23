@@ -8,8 +8,8 @@ import {
       type ReactNode,
 } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { UNAUTHORIZED_EVENT } from "@/shared/lib/axios";
-import { tokenStorage } from "@/shared/lib/token-storage";
+import { ApiError, UNAUTHORIZED_EVENT } from "@/shared/lib/axios";
+import { tokenStorage, userCache } from "@/shared/lib/token-storage";
 import { authApi } from "../api/auth.api";
 import type { AuthResponse, User } from "../types";
 
@@ -32,15 +32,20 @@ export const meQueryKey = ["auth", "me"] as const;
 export function AuthProvider({ children }: { children: ReactNode }) {
       const queryClient = useQueryClient();
       const [token, setToken] = useState(tokenStorage.get);
+      const [cachedUser] = useState(() => (token ? userCache.get<User>() : null));
 
-      // A stored token is only trusted once /auth/me confirms it.
+      // /auth/me refreshes the user once per visit; until it answers, the user saved at login stands in.
       const me = useQuery({
             queryKey: meQueryKey,
             queryFn: authApi.me,
             enabled: token !== null,
             retry: false,
             staleTime: Infinity,
+            initialData: cachedUser ?? undefined,
+            initialDataUpdatedAt: 0,
       });
+      // Only a 401 means the token is bad; a 404 or 5xx says nothing about the session.
+      const rejected = me.isError && me.error instanceof ApiError && me.error.status === 401;
 
       const logout = useCallback(() => {
             tokenStorage.clear();
@@ -51,13 +56,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const startSession = useCallback(
             ({ user, token }: AuthResponse) => {
                   tokenStorage.set(token);
+                  userCache.set(user);
                   queryClient.setQueryData(meQueryKey, user);
                   setToken(token);
             },
             [queryClient],
       );
 
-      const setUser = useCallback((user: User) => queryClient.setQueryData(meQueryKey, user), [queryClient]);
+      const setUser = useCallback(
+            (user: User) => {
+                  userCache.set(user);
+                  queryClient.setQueryData(meQueryKey, user);
+            },
+            [queryClient],
+      );
 
       useEffect(() => {
             window.addEventListener(UNAUTHORIZED_EVENT, logout);
@@ -66,11 +78,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // An invalid stored token (expired, server secret rotated) ends the session.
       useEffect(() => {
-            if (me.isError) logout();
-      }, [me.isError, logout]);
+            if (rejected || (me.isError && !me.data)) logout();
+      }, [rejected, me.isError, me.data, logout]);
 
       const status: AuthStatus =
-            token === null || me.isError
+            token === null || rejected || (me.isError && !me.data)
                   ? "anonymous"
                   : me.data
                     ? "authenticated"
