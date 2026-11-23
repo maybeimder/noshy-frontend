@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { ACCEPTED_IMAGE_TYPES, imageVariant } from "@/shared/lib/images";
-import { uploadImage, type UploadPurpose } from "@/shared/lib/upload";
+import { uploadImage, type UploadedMedia, type UploadPurpose } from "@/shared/lib/upload";
 import Icon from "./Icon";
 import Mascot from "./Mascot";
 import Sticker from "./Sticker";
@@ -9,7 +9,10 @@ type ImagePickerProps = {
       label: string;
       purpose: UploadPurpose;
       value: string | null;
-      onChange: (url: string | null) => void;
+      /** The uploaded photo, or null when the user removes it. */
+      onChange: (media: UploadedMedia | null) => void;
+      /** False hides «Quitar», for photos the API cannot remove. */
+      removable?: boolean;
       /** "cover": peach photo card (ref/Nueva receta.png) · "circle": avatar. */
       shape?: "cover" | "circle";
       /** Circle only: shown when there is no photo (e.g. the initial). */
@@ -20,7 +23,7 @@ type ImagePickerProps = {
 const pillButton =
       "inline-flex min-h-10 cursor-pointer items-center gap-1.5 rounded-full bg-card px-4 text-sm font-extrabold text-ink shadow-[0_6px_16px_-10px_rgb(43_20_51/0.45)] hover:bg-field focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-primary-strong";
 
-export default function ImagePicker({ label, purpose, value, onChange, shape = "cover", placeholder, hint }: ImagePickerProps) {
+export default function ImagePicker({ label, purpose, value, onChange, removable = true, shape = "cover", placeholder, hint }: ImagePickerProps) {
       const inputId = useId();
       const inputRef = useRef<HTMLInputElement>(null);
       const [preview, setPreview] = useState<string | null>(null);
@@ -101,7 +104,7 @@ export default function ImagePicker({ label, purpose, value, onChange, shape = "
                                           {uploading ? "Subiendo…" : value ? "Cambiar foto" : "Subir foto"}
                                           {fileInput}
                                     </label>
-                                    {value && !uploading && (
+                                    {value && removable && !uploading && (
                                           <button type="button" onClick={() => onChange(null)} className={pillButton}>
                                                 <Icon name="trash" className="size-4" />
                                                 Quitar
@@ -129,10 +132,12 @@ export default function ImagePicker({ label, purpose, value, onChange, shape = "
                                                       Cambiar foto
                                                       {fileInput}
                                                 </label>
-                                                <button type="button" onClick={() => onChange(null)} className={pillButton}>
-                                                      <Icon name="trash" className="size-4" />
-                                                      Quitar
-                                                </button>
+                                                {removable && (
+                                                      <button type="button" onClick={() => onChange(null)} className={pillButton}>
+                                                            <Icon name="trash" className="size-4" />
+                                                            Quitar
+                                                      </button>
+                                                )}
                                           </div>
                                     )}
                               </div>

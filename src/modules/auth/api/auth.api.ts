@@ -1,24 +1,44 @@
-import { api, ApiError } from "@/shared/lib/axios";
-import type { AuthResponse, LoginInput, RegisterInput, User } from "../types";
+import { api, ApiError, unwrap } from "@/shared/lib/axios";
+import { tokenStorage } from "@/shared/lib/token-storage";
+import type { AuthResponse, LoginInput, OnboardingStatus, RegisterInput, User } from "../types";
 
 /** Terms the sign-up screen shows («Al continuar aceptas los Términos…»); the backend records consent to it. */
 export const TERMS_VERSION = "2026-09";
 
-/** Accepts { user, token } or the same inside { data }; anything else is a contract mismatch, not a session. */
-function toSession(body: unknown): AuthResponse {
-      const payload = (body as { data?: unknown })?.data ?? body;
-      const { user, token } = (payload ?? {}) as Partial<AuthResponse>;
-      if (typeof token !== "string" || !token || !user?.id) {
+function toSession(session: AuthResponse): AuthResponse {
+      if (!session?.tokens?.accessToken || !session.tokens.refreshToken || !session.user?.id) {
             throw new ApiError(0, "INVALID_SESSION_RESPONSE", "El servidor respondió, pero sin tu sesión. Avísanos e inténtalo más tarde.");
       }
-      return { user, token };
+      return session;
 }
 
+/** User id: the `sub` claim of the access token (no endpoint returns it before onboarding ends). */
+function tokenSubject(): string {
+      try {
+            const payload = tokenStorage.get()!.split(".")[1]!.replace(/-/g, "+").replace(/_/g, "/");
+            return (JSON.parse(atob(payload)) as { sub?: string }).sub ?? "";
+      } catch {
+            return "";
+      }
+}
+
+type Account = Pick<User, "name" | "lastName" | "email" | "emailVerified" | "avatarUrl">;
+
 export const authApi = {
-      login: (input: LoginInput) => api.post("/auth/login", input).then((r) => toSession(r.data)),
+      login: (input: LoginInput) => api.post<{ data: AuthResponse }>("/auth/login", input).then(unwrap).then(toSession),
       register: ({ name, email, password }: RegisterInput) =>
-            api.post("/auth/register", { name, email, password, acceptedTermsVersion: TERMS_VERSION }).then((r) => toSession(r.data)),
-      me: () => api.get<User>("/auth/me").then((r) => r.data),
-      /** Proposed in backend/recommendation.md §1; 404 until the backend adds it. */
-      updateMe: (input: { avatarUrl: string | null }) => api.patch<User>("/auth/me", input).then((r) => r.data),
+            api
+                  .post<{ data: AuthResponse }>("/auth/register", { name, email, password, acceptedTermsVersion: TERMS_VERSION })
+                  .then(unwrap)
+                  .then(toSession),
+      /** There is no /auth/me: account data and onboarding status live in two endpoints. */
+      me: async (): Promise<User> => {
+            const [settings, onboarding] = await Promise.all([
+                  api.get<{ data: { account: Account } }>("/me/settings").then(unwrap),
+                  api.get<{ data: { status: OnboardingStatus } }>("/me/onboarding").then(unwrap),
+            ]);
+            return { id: tokenSubject(), ...settings.account, onboardingStatus: onboarding.status };
+      },
+      verifyEmail: (code: string) => api.post<{ data: { user: User } }>("/auth/email/verify", { code }).then(unwrap),
+      resendCode: () => api.post("/auth/email/resend").then(() => undefined),
 };

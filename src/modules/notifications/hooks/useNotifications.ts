@@ -1,43 +1,16 @@
-import { useCallback, useMemo } from "react";
+import { useHome } from "@/modules/cooking/hooks/useHome";
 import { useAuth } from "@/modules/auth/hooks/useAuth";
-import { useCommunityRecipes } from "@/modules/recipes/hooks/useRecipes";
-import { useSavedShoppingList } from "@/modules/shopping-list/hooks/useShoppingList";
-import { useUserValue } from "@/shared/lib/user-store";
+import { plural } from "@/shared/lib/format";
 
-export type AppNotification = { id: string; text: string; to: string; createdAt: string };
+export type AppNotification = { id: string; text: string; to: string };
 
-const FIRST_VISIT_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
-
-/**
- * Derived from real data until the backend has notifications (backend/recommendation.md §5):
- * community recipes published by others since the bell was last opened, and pending shopping.
- */
-export function useNotifications() {
+/** What needs attention, from the same call that paints Inicio. */
+export function useNotifications(): AppNotification[] {
       const { user } = useAuth();
-      const userId = user?.id ?? "anonymous";
-      const community = useCommunityRecipes();
-      const { saved } = useSavedShoppingList();
-      const [seenAt, setSeenAt] = useUserValue<string>(userId, "notificationsSeenAt");
-
-      const items = useMemo<AppNotification[]>(() => {
-            const since = seenAt ?? new Date(Date.now() - FIRST_VISIT_WINDOW_MS).toISOString();
-            const fresh = (community.data ?? [])
-                  .filter((r) => r.publishedAt && r.publishedAt > since && r.authorName && r.authorName !== user?.name)
-                  .map((r) => ({
-                        id: `recipe-${r.id}`,
-                        text: `${r.authorName!.split(" ")[0]} publicó «${r.title}»`,
-                        to: `/comunidad/${r.id}`,
-                        createdAt: r.publishedAt!,
-                  }));
-            const pending = saved ? saved.list.missingItems.length - saved.checked.length : 0;
-            const shopping =
-                  pending > 0
-                        ? [{ id: "shopping", text: `Tu lista tiene ${pending} ${pending === 1 ? "cosa" : "cosas"} por comprar`, to: "/compras", createdAt: saved!.createdAt }]
-                        : [];
-            return [...shopping, ...fresh].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-      }, [community.data, saved, seenAt, user?.name]);
-
-      const markSeen = useCallback(() => setSeenAt(new Date().toISOString()), [setSeenAt]);
-
-      return { items, unread: items.length > 0, markSeen };
+      const { data: home } = useHome();
+      const items: AppNotification[] = [];
+      if (home?.activeCookingSession) items.push({ id: "cooking", text: `Dejaste ${home.activeCookingSession.recipe.title} a medias`, to: `/cocinar/${home.activeCookingSession.id}` });
+      if (home && home.chef.unreadCount > 0) items.push({ id: "chef", text: `Tu chef te dejó ${plural(home.chef.unreadCount, "mensaje", "mensajes")}`, to: "/chef" });
+      if (user && !user.emailVerified) items.push({ id: "email", text: "Verifica tu correo para publicar y comentar", to: "/ajustes" });
+      return items;
 }

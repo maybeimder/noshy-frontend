@@ -2,18 +2,6 @@ import type { ReactNode } from "react";
 import Button from "./Button";
 import Icon, { type IconName } from "./Icon";
 
-export function LoadingState({ label = "Cargando…" }: { label?: string }) {
-      return (
-            <div role="status" className="flex flex-col items-center gap-3 py-12 text-ink-muted">
-                  <span
-                        aria-hidden
-                        className="size-8 animate-spin rounded-full border-4 border-primary-soft border-t-primary"
-                  />
-                  <span className="text-sm">{label}</span>
-            </div>
-      );
-}
-
 export function ErrorState({
       message,
       onRetry,

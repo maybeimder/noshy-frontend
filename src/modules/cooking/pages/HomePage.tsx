@@ -1,37 +1,25 @@
+import { useState } from "react";
 import { Link, Navigate } from "react-router-dom";
-import { useRecommendations } from "@/modules/feedback/hooks/useFeedback";
-import { useInventory } from "@/modules/inventory/hooks/useInventory";
-import { useCaloriesToday } from "@/modules/meals/hooks/useCaloriesToday";
-import { useActivePlan } from "@/modules/plans/hooks/usePlan";
+import { useAuth } from "@/modules/auth/hooks/useAuth";
 import { useOnboardingSkipped } from "@/modules/plans/utils/onboarding";
-import { useCommunityRecipes, useMyRecipes } from "@/modules/recipes/hooks/useRecipes";
-import type { Recipe } from "@/modules/recipes/types";
 import AppHeader from "@/shared/components/layout/AppHeader";
 import Icon from "@/shared/components/ui/Icon";
-import { LoadingState } from "@/shared/components/ui/QueryState";
+import { MascotAvatar } from "@/shared/components/ui/MascotBubble";
+import { ErrorState } from "@/shared/components/ui/QueryState";
 import { MarkerText } from "@/shared/components/ui/ScribbleText";
-import ChefPromptCard from "../components/ChefPromptCard";
+import { plural } from "@/shared/lib/format";
+import type { MealSlot } from "@/shared/types/api";
+import { useRememberShape } from "@/shared/hooks/useShape";
 import DayCard from "../components/DayCard";
+import HomeSkeleton, { type HomeShape } from "../components/HomeSkeleton";
+import LogMealDialog from "../components/LogMealDialog";
 import MealsRow from "../components/MealsRow";
 import MostCooked from "../components/MostCooked";
-import TodayCarousel, { type TodayPick } from "../components/TodayCarousel";
+import NudgeCard from "../components/NudgeCard";
+import TodayCarousel from "../components/TodayCarousel";
+import { useHome } from "../hooks/useHome";
 
-const IDEAS = 3;
-
-/** Recommended recipes first, then the newest from the community, then mine: up to three, no repeats. */
-function pickToday(mine: Recipe[], community: Recipe[], recommendedIds: string[]): TodayPick[] {
-      const mineIds = new Set(mine.map((r) => r.id));
-      const link = (recipe: Recipe) => (mineIds.has(recipe.id) ? `/recetas/${recipe.id}` : `/comunidad/${recipe.id}`);
-      const all = [...mine, ...community];
-      const picks: TodayPick[] = [];
-      const add = (recipe: Recipe | undefined, reason: string) => {
-            if (recipe && picks.length < IDEAS && !picks.some((p) => p.recipe.id === recipe.id)) picks.push({ recipe, to: link(recipe), reason });
-      };
-      recommendedIds.forEach((id) => add(all.find((r) => r.id === id), "Te va a encantar"));
-      [...community].sort((a, b) => (b.publishedAt ?? "").localeCompare(a.publishedAt ?? "")).forEach((r) => add(r, r.authorName ? `De ${r.authorName.split(" ")[0]}` : "De la comunidad"));
-      mine.forEach((r) => add(r, "Tu receta"));
-      return picks;
-}
+const cardLink = "mx-5 flex items-center gap-4 rounded-card bg-card p-5 shadow-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong";
 
 function SectionTitle({ id, title, action }: { id: string; title: string; action?: { to: string; label: string } }) {
       return (
@@ -49,58 +37,111 @@ function SectionTitle({ id, title, action }: { id: string; title: string; action
 }
 
 export default function HomePage() {
-      const plan = useActivePlan();
-      const mine = useMyRecipes();
-      const community = useCommunityRecipes();
-      const recommendations = useRecommendations();
-      const inventory = useInventory();
-      const caloriesToday = useCaloriesToday();
+      const { user } = useAuth();
+      const home = useHome();
       const [skipped] = useOnboardingSkipped();
+      const [slot, setSlot] = useState<MealSlot | null>(null);
 
-      const recommendedIds = (recommendations.data ?? []).filter((r) => r.targetType === "recipe").map((r) => r.targetId);
-      const picks = pickToday(mine.data ?? [], community.data ?? [], recommendedIds);
-      const loadingPicks = mine.isPending || community.isPending;
+      const shown = home.data;
+      useRememberShape<HomeShape>(
+            "home",
+            shown
+                  ? { active: Boolean(shown.activeCookingSession), meals: shown.day?.meals.length ?? 0, ideas: shown.ideas?.items.length ?? 0, nudge: Boolean(shown.nudge), cooked: shown.mostCooked?.length ?? 0 }
+                  : null,
+      );
 
-      // A new account (or one that never finished) starts with the six onboarding steps.
-      if (plan.isSuccess && plan.data === null && !skipped) return <Navigate to="/plan/nuevo" replace />;
+      // A new account (or one that never finished) starts with the onboarding steps.
+      if (user?.onboardingStatus !== "completed") {
+            if (!skipped) return <Navigate to="/plan/nuevo" replace />;
+            return (
+                  <>
+                        <AppHeader />
+                        <main className="mx-auto max-w-xl pt-3">
+                              <Link to="/plan/nuevo" className={cardLink}>
+                                    <span className="grid size-12 shrink-0 place-items-center rounded-full bg-peach-soft text-peach-ink">
+                                          <Icon name="target" />
+                                    </span>
+                                    <span className="min-w-0 flex-1">
+                                          <span className="block font-display text-title font-extrabold text-ink">Configura tu chef</span>
+                                          <span className="block text-sm text-ink-muted">Así sabe cuánto y qué te conviene comer.</span>
+                                    </span>
+                                    <Icon name="arrowRight" className="size-6 shrink-0 text-primary-strong" />
+                              </Link>
+                        </main>
+                  </>
+            );
+      }
 
+      const data = home.data;
+      if (home.isPending) {
+            return (
+                  <>
+                        <AppHeader />
+                        <HomeSkeleton />
+                  </>
+            );
+      }
       return (
             <>
                   <AppHeader />
-
                   <main className="mx-auto flex max-w-xl flex-col gap-6 pt-3 pb-12">
-                        <DayCard plan={plan.data} caloriesToday={caloriesToday.data ?? 0} />
-                        {plan.data && <MealsRow mealsPerDay={plan.data.mealsPerDay ?? 3} />}
-
-                        <section aria-labelledby="for-you" className="flex flex-col gap-3">
-                              <SectionTitle id="for-you" title="Hoy para ti" action={picks.length > 1 ? { to: "/recetas?ver=explorar", label: `${picks.length} ideas` } : undefined} />
-                              {loadingPicks ? (
-                                    <LoadingState />
-                              ) : picks.length > 0 ? (
-                                    <TodayCarousel picks={picks} inventory={inventory.data ?? []} />
-                              ) : (
+                        {home.isError ? (
+                              <div className="px-5">
+                                    <ErrorState message={home.error.message} onRetry={() => home.refetch()} />
+                              </div>
+                        ) : data ? (
+                              <>
+                                    {data.activeCookingSession && (
+                                          <Link to={`/cocinar/${data.activeCookingSession.id}`} className={cardLink}>
+                                                <span className="grid size-12 shrink-0 place-items-center rounded-full bg-primary-soft text-primary-strong">
+                                                      <Icon name="flame" />
+                                                </span>
+                                                <span className="min-w-0 flex-1">
+                                                      <span className="block truncate font-display text-title font-extrabold text-ink">Continuar: {data.activeCookingSession.recipe.title}</span>
+                                                      <span className="block text-sm text-ink-muted">
+                                                            Paso {data.activeCookingSession.currentStepIndex + 1} de {data.activeCookingSession.stepsCount}
+                                                      </span>
+                                                </span>
+                                                <Icon name="arrowRight" className="size-6 shrink-0 text-primary-strong" />
+                                          </Link>
+                                    )}
+                                    {data.day && (
+                                          <>
+                                                <DayCard day={data.day} />
+                                                <MealsRow meals={data.day.meals} onPick={setSlot} />
+                                          </>
+                                    )}
+                                    {data.nudge && (
+                                          <div className="px-5">
+                                                <NudgeCard nudge={data.nudge} />
+                                          </div>
+                                    )}
+                                    {data.ideas && data.ideas.items.length > 0 && (
+                                          <section aria-labelledby="for-you" className="flex flex-col gap-3">
+                                                <SectionTitle id="for-you" title="Hoy para ti" action={{ to: "/recetas?ver=explorar", label: "Más ideas" }} />
+                                                <TodayCarousel recipes={data.ideas.items} />
+                                          </section>
+                                    )}
                                     <Link
-                                          to="/recetas/nueva"
-                                          className="mx-5 flex items-center gap-4 rounded-card bg-card p-6 shadow-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong"
+                                          to="/chef"
+                                          className="mx-5 flex items-center gap-3 rounded-full bg-card p-2 pr-4 shadow-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong"
                                     >
-                                          <span className="grid size-12 shrink-0 place-items-center rounded-full bg-secondary-soft text-ink">
-                                                <Icon name="plus" />
+                                          <MascotAvatar tone="blush" className="size-12" />
+                                          <span className="min-w-0 flex-1 font-display font-extrabold text-ink">
+                                                {data.chef.unreadCount > 0 ? `Tienes ${plural(data.chef.unreadCount, "mensaje", "mensajes")} de tu chef` : "Habla con tu chef"}
                                           </span>
-                                          <span className="flex-1 text-base text-ink">
-                                                <strong className="block">Aún no hay recetas</strong>
-                                                Crea la primera y aparecerá aquí.
-                                          </span>
+                                          <Icon name="arrowRight" className="size-5 text-primary-strong" />
                                     </Link>
-                              )}
-                        </section>
-
-                        <ChefPromptCard inventory={inventory.data} />
-
-                        <section aria-labelledby="most-cooked" className="flex flex-col gap-3">
-                              <SectionTitle id="most-cooked" title="Lo que más cocinas" action={{ to: "/recetas", label: "Ver todo" }} />
-                              <MostCooked recipes={mine.data ?? []} />
-                        </section>
+                                    {data.mostCooked && (
+                                          <section aria-labelledby="most-cooked" className="flex flex-col gap-3">
+                                                <SectionTitle id="most-cooked" title="Lo que más cocinas" action={{ to: "/cocinadas", label: "Ver todo" }} />
+                                                <MostCooked recipes={data.mostCooked} />
+                                          </section>
+                                    )}
+                              </>
+                        ) : null}
                   </main>
+                  {slot && data?.day && <LogMealDialog key={slot.slot} slot={slot} date={data.day.date} onClose={() => setSlot(null)} />}
             </>
       );
 }

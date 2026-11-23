@@ -1,41 +1,59 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useDebounced } from "@/shared/hooks/useDebounced";
 import { inventoryApi } from "../api/inventory.api";
-import type { InventoryItemInput } from "../types";
+import type { PantryFilters } from "../types";
 
-export const inventoryKey = ["inventory"] as const;
+export const pantryKey = ["pantry"] as const;
 
-export function useInventory() {
-      return useQuery({ queryKey: inventoryKey, queryFn: inventoryApi.list });
+export function usePantryOverview() {
+      return useQuery({ queryKey: ["pantryOverview"], queryFn: inventoryApi.overview });
 }
 
-// Every pantry change also changes what recipes are missing, so refresh it as a whole.
-export function useInventoryMutations() {
-      const queryClient = useQueryClient();
-      const onSuccess = () => queryClient.invalidateQueries({ queryKey: inventoryKey });
+export function usePantry(filters: PantryFilters) {
+      return useInfiniteQuery({
+            queryKey: [...pantryKey, filters],
+            queryFn: ({ pageParam }) => inventoryApi.list(filters, pageParam),
+            initialPageParam: undefined as string | undefined,
+            getNextPageParam: (page) => page.meta.nextCursor ?? undefined,
+            placeholderData: keepPreviousData,
+      });
+}
 
+/** What is in the pantry also decides ideas, recipe matches and what is missing. */
+export function useInvalidatePantry() {
+      const queryClient = useQueryClient();
+      return () =>
+            Promise.all(
+                  [pantryKey, ["pantryOverview"], ["recipe"], ["recommendations"], ["home"], ["shoppingList"]].map((queryKey) =>
+                        queryClient.invalidateQueries({ queryKey }),
+                  ),
+            );
+}
+
+export function usePantryMutations() {
+      const onSuccess = useInvalidatePantry();
       return {
-            create: useMutation({ mutationFn: inventoryApi.create, onSuccess }),
-            /** Adds bought items, topping up an existing row (same name + unit) instead of duplicating it. */
-            addMany: useMutation({
-                  mutationFn: async (items: InventoryItemInput[]) => {
-                        const current = await queryClient.fetchQuery({ queryKey: inventoryKey, queryFn: inventoryApi.list });
-                        const key = (i: InventoryItemInput) => `${i.name.trim().toLowerCase()}::${i.unit.trim().toLowerCase()}`;
-                        return Promise.all(
-                              items.map((item) => {
-                                    const existing = current.find((row) => key(row) === key(item));
-                                    return existing
-                                          ? inventoryApi.update(existing.id, { quantity: existing.quantity + item.quantity })
-                                          : inventoryApi.create(item);
-                              }),
-                        );
-                  },
-                  onSuccess,
-            }),
-            update: useMutation({
-                  mutationFn: ({ id, input }: { id: string; input: Partial<InventoryItemInput> }) =>
-                        inventoryApi.update(id, input),
-                  onSuccess,
-            }),
+            add: useMutation({ mutationFn: inventoryApi.add, onSuccess }),
+            update: useMutation({ mutationFn: inventoryApi.update, onSuccess }),
             remove: useMutation({ mutationFn: inventoryApi.remove, onSuccess }),
+            saveAnswers: useMutation({ mutationFn: inventoryApi.saveAnswers, onSuccess }),
       };
+}
+
+const MIN_QUERY = 2; // the backend asks for 2 characters
+
+export function useIngredientSearch(query: string) {
+      const q = useDebounced(query.trim());
+      return useQuery({
+            queryKey: ["ingredients", q],
+            // A newer keystroke aborts the older request.
+            queryFn: ({ signal }) => inventoryApi.searchIngredients(q, signal),
+            enabled: q.length >= MIN_QUERY,
+            staleTime: 5 * 60_000,
+            placeholderData: keepPreviousData,
+      });
+}
+
+export function usePantrySuggestions() {
+      return useQuery({ queryKey: ["pantrySuggestions"], queryFn: inventoryApi.suggestions, staleTime: Infinity });
 }

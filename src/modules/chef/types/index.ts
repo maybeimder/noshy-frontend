@@ -1,40 +1,28 @@
-import type { FeedbackEntry } from "@/modules/feedback/types";
-import type { InventoryItem } from "@/modules/inventory/types";
-import type { NutritionPlan } from "@/modules/plans/types";
-import type { Recipe } from "@/modules/recipes/types";
+import type { RecipeCard } from "@/shared/types/api";
 
-export type ChefSessionStatus = "active" | "closed" | "recovery_pending";
+export type ChefBlock =
+      | { id: string; type: "text"; text: string }
+      | { id: string; type: "recipeCard"; recipe: RecipeCard; actions: ("save" | "addToShoppingList" | "cook")[] }
+      | { id: string; type: "quickReplies" | "suggestedPrompts"; options: { id: string; label: string }[] }
+      | { id: string; type: "feedbackPrompt"; targetBlockId: string; label: string; allowAnotherIdea: boolean }
+      | { id: string; type: "learnedInsight"; insightId: string; text: string }
+      | { id: string; type: "adaptationProposal"; proposalId: string; recipeId: string; summary: string; changes: string[] };
 
-export type ChefSession = {
-      id: string;
-      status: ChefSessionStatus;
-      basePreferencesVersion: number;
-      preferencesVersion: number;
-      preferencesMarkdown: string;
-      startedAt: string;
-      closedAt?: string;
-};
+export type ChefMessage = { id: string; threadId: string; role: "chef" | "user"; createdAt: string; clientMessageId?: string; blocks: ChefBlock[] };
+export type ChefThread = { id: string; context: { type: "main" } | { type: "recipe"; recipeId: string; title: string }; unreadCount: number };
 
-export type ChefMessage = {
-      id: string;
-      role: "user" | "assistant";
-      content: string;
-      createdAt: string;
-};
+export type ChefInput =
+      | { type: "text"; text: string; via: "keyboard" | "voice" }
+      | {
+              type: "action";
+              action:
+                    | { type: "quickReply" | "suggestedPrompt"; messageId: string; optionId: string }
+                    | { type: "anotherIdea"; messageId: string; blockId: string };
+        };
 
-export type ChefContext = {
-      sessionId: string;
-      preferencesMarkdown: string;
-      preferencesVersion: number;
-      nutritionPlan?: NutritionPlan;
-      inventory: InventoryItem[];
-      messages: ChefMessage[];
-};
-
-export type ChefReply = {
-      message: ChefMessage;
-      /** Feedback the agent detected and recorded from the conversation. */
-      feedback: FeedbackEntry[];
-      /** Present when the user asked the chef to save a recipe ("añade esa receta a mis recetas"). */
-      savedRecipe?: Recipe;
-};
+export type ChefStreamEvent =
+      | { event: "message.created"; data: { message: ChefMessage } }
+      | { event: "block.delta"; data: { messageId: string; blockId: string; type: "text"; delta: string } }
+      | { event: "block.completed"; data: { messageId: string; block: ChefBlock } }
+      | { event: "message.completed"; data: { messageId: string } }
+      | { event: "error"; data: { code: string; message: string } };

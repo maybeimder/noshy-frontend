@@ -22,6 +22,8 @@ type AuthContextValue = {
       startSession: (auth: AuthResponse) => void;
       /** Replaces the cached user after a profile change. */
       setUser: (user: User) => void;
+      /** Changes some fields of the current user (avatar, verified email, onboarding done). */
+      patchUser: (patch: Partial<User>) => void;
       logout: () => void;
 };
 
@@ -34,7 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const [token, setToken] = useState(tokenStorage.get);
       const [cachedUser] = useState(() => (token ? userCache.get<User>() : null));
 
-      // /auth/me refreshes the user once per visit; until it answers, the user saved at login stands in.
+      // Refreshes the user once per visit; until it answers, the user saved at login stands in.
       const me = useQuery({
             queryKey: meQueryKey,
             queryFn: authApi.me,
@@ -54,11 +56,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }, [queryClient]);
 
       const startSession = useCallback(
-            ({ user, token }: AuthResponse) => {
-                  tokenStorage.set(token);
+            ({ user, tokens }: AuthResponse) => {
+                  tokenStorage.set(tokens);
                   userCache.set(user);
                   queryClient.setQueryData(meQueryKey, user);
-                  setToken(token);
+                  setToken(tokens.accessToken);
             },
             [queryClient],
       );
@@ -71,10 +73,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             [queryClient],
       );
 
+      const patchUser = useCallback(
+            (patch: Partial<User>) => {
+                  const current = queryClient.getQueryData<User>(meQueryKey);
+                  if (current) setUser({ ...current, ...patch });
+            },
+            [queryClient, setUser],
+      );
+
       useEffect(() => {
             window.addEventListener(UNAUTHORIZED_EVENT, logout);
             return () => window.removeEventListener(UNAUTHORIZED_EVENT, logout);
       }, [logout]);
+
+      // Keep the saved copy fresh for the next visit.
+      useEffect(() => {
+            if (me.data) userCache.set(me.data);
+      }, [me.data]);
 
       // An invalid stored token (expired, server secret rotated) ends the session.
       useEffect(() => {
@@ -89,8 +104,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     : "loading";
 
       const value = useMemo(
-            () => ({ status, user: me.data ?? null, startSession, setUser, logout }),
-            [status, me.data, startSession, setUser, logout],
+            () => ({ status, user: me.data ?? null, startSession, setUser, patchUser, logout }),
+            [status, me.data, startSession, setUser, patchUser, logout],
       );
 
       return <AuthContext value={value}>{children}</AuthContext>;

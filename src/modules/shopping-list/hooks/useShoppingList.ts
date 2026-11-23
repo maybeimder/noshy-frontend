@@ -1,53 +1,38 @@
-import { useCallback } from "react";
-import { useMutation } from "@tanstack/react-query";
-import { useAuth } from "@/modules/auth/hooks/useAuth";
-import type { Ingredient } from "@/modules/recipes/types";
-import { readUserValue, useUserValue } from "@/shared/lib/user-store";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInvalidatePantry } from "@/modules/inventory/hooks/useInventory";
 import { shoppingListApi } from "../api/shopping-list.api";
-import type { SavedShoppingList, ShoppingList } from "../types";
+import type { ItemChange, ShoppingItem, ShoppingList } from "../types";
 
-const NAME = "shoppingList";
+export const shoppingKey = ["shoppingList"] as const;
 
-export const itemKey = (item: Ingredient) => `${item.name.trim().toLowerCase()}::${item.unit.trim().toLowerCase()}`;
-
-/** The current list, kept in this browser per user (the backend does not store lists). */
-export function useSavedShoppingList() {
-      const { user } = useAuth();
-      const userId = user?.id ?? "anonymous";
-      const [saved, setSaved] = useUserValue<SavedShoppingList>(userId, NAME);
-      const latest = () => readUserValue<SavedShoppingList>(userId, NAME);
-
-      const save = useCallback(
-            (list: ShoppingList) => setSaved({ list, checked: [], createdAt: new Date().toISOString() }),
-            [setSaved],
-      );
-      const toggle = (key: string) => {
-            const current = latest();
-            if (!current) return;
-            const checked = current.checked.includes(key)
-                  ? current.checked.filter((k) => k !== key)
-                  : [...current.checked, key];
-            setSaved({ ...current, checked });
-      };
-      /** Drops items once they are in the pantry; an empty list is discarded. */
-      const removeItems = (keys: string[]) => {
-            const current = latest();
-            if (!current) return;
-            const keep = (item: Ingredient) => !keys.includes(itemKey(item));
-            const list = {
-                  ...current.list,
-                  items: current.list.items.filter(keep),
-                  missingItems: current.list.missingItems.filter(keep),
-            };
-            setSaved(list.missingItems.length ? { ...current, list, checked: [] } : null);
-      };
-      const clear = () => setSaved(null);
-
-      return { saved, save, toggle, removeItems, clear };
+export function useShoppingList(sort: "category" | "storeLayout" = "category") {
+      return useQuery({ queryKey: [...shoppingKey, sort], queryFn: () => shoppingListApi.current(sort), placeholderData: keepPreviousData });
 }
 
-/** Builds a list on the server and keeps it as the current one. */
-export function useCreateShoppingList() {
-      const { save } = useSavedShoppingList();
-      return useMutation({ mutationFn: shoppingListApi.create, onSuccess: save });
+const mapItem = (list: ShoppingList, id: string, change: (item: ShoppingItem) => ShoppingItem): ShoppingList => ({
+      ...list,
+      groups: list.groups.map((g) => ({ ...g, items: g.items.map((i) => (i.id === id ? change(i) : i)) })),
+});
+
+export function useShoppingMutations() {
+      const queryClient = useQueryClient();
+      const invalidatePantry = useInvalidatePantry();
+      const invalidate = () => queryClient.invalidateQueries({ queryKey: shoppingKey });
+      const setLists = (change: (list: ShoppingList) => ShoppingList) =>
+            queryClient.setQueriesData<ShoppingList | null>({ queryKey: shoppingKey }, (list) => (list ? change(list) : list));
+      const writeBack = ({ item, totals, progress }: ItemChange) =>
+            setLists((list) => ({ ...mapItem(list, item.id, () => item), totals, progress: progress ?? list.progress }));
+
+      return {
+            patch: useMutation({
+                  mutationFn: shoppingListApi.patchItem,
+                  onSuccess: writeBack,
+                  onError: () => void invalidate(),
+            }),
+            swap: useMutation({ mutationFn: shoppingListApi.swap, onSuccess: writeBack, onError: () => void invalidate() }),
+            addItems: useMutation({ mutationFn: shoppingListApi.addItems, onSuccess: () => Promise.all([invalidate(), queryClient.invalidateQueries({ queryKey: ["recipe"] })]) }),
+            addRecipe: useMutation({ mutationFn: shoppingListApi.addRecipe, onSuccess: () => Promise.all([invalidate(), queryClient.invalidateQueries({ queryKey: ["recipe"] })]) }),
+            share: useMutation({ mutationFn: shoppingListApi.share }),
+            checkout: useMutation({ mutationFn: shoppingListApi.checkout, onSuccess: () => invalidatePantry() }),
+      };
 }

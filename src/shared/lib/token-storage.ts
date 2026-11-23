@@ -1,4 +1,5 @@
 const KEY = "noshy.token";
+const REFRESH_KEY = "noshy.refresh";
 const USER_KEY = "noshy.user";
 
 // Storage can throw (private mode, blocked site data); treat that as "no session".
@@ -10,9 +11,17 @@ export const tokenStorage = {
                   return null;
             }
       },
-      set(token: string) {
+      getRefresh(): string | null {
             try {
-                  localStorage.setItem(KEY, token);
+                  return localStorage.getItem(REFRESH_KEY);
+            } catch {
+                  return null;
+            }
+      },
+      set({ accessToken, refreshToken }: { accessToken: string; refreshToken: string }) {
+            try {
+                  localStorage.setItem(KEY, accessToken);
+                  localStorage.setItem(REFRESH_KEY, refreshToken);
             } catch {
                   // Session lasts only while the tab is open.
             }
@@ -20,6 +29,7 @@ export const tokenStorage = {
       clear() {
             try {
                   localStorage.removeItem(KEY);
+                  localStorage.removeItem(REFRESH_KEY);
                   localStorage.removeItem(USER_KEY);
             } catch {
                   // Nothing to clear.

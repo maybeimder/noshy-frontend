@@ -25,7 +25,7 @@ export default function RegisterPage() {
             },
             onError: (error) => {
                   if (!(error instanceof ApiError)) return;
-                  if (error.code === "USER_ALREADY_EXISTS") {
+                  if (error.code === "EMAIL_TAKEN") {
                         setFieldErrors({ email: "Ya existe una cuenta con este email." });
                   } else {
                         setFieldErrors(error.fieldErrors);

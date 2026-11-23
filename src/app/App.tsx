@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { BrowserRouter, useRoutes } from "react-router-dom";
-import SplashScreen from "@/modules/auth/components/SplashScreen";
 import Providers from "./providers";
+import RouteSkeleton from "./RouteSkeleton";
 import { routes } from "./routes";
 
 function AppRoutes() {
@@ -12,7 +12,7 @@ export default function App() {
       return (
             <Providers>
                   <BrowserRouter>
-                        <Suspense fallback={<SplashScreen />}>
+                        <Suspense fallback={<RouteSkeleton />}>
                               <AppRoutes />
                         </Suspense>
                   </BrowserRouter>

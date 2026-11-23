@@ -1,14 +1,16 @@
-import { useState, type CSSProperties } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
+import ReceiptScanner from "@/modules/receipts/components/ReceiptScanner";
 import Button from "@/shared/components/ui/Button";
 import { DishPlate } from "@/shared/components/ui/DishArt";
-import Dialog from "@/shared/components/ui/Dialog";
-import { Sparkle } from "@/shared/components/ui/Doodles";
 import FormAlert from "@/shared/components/ui/FormAlert";
 import Icon from "@/shared/components/ui/Icon";
 import { fieldClass } from "@/shared/components/ui/TextField";
 import { tones } from "@/shared/lib/tones";
-import type { NutritionPlan, PlanInput } from "../types";
-import { suggestedTargets } from "../utils/labels";
+import { useDebounced } from "@/shared/hooks/useDebounced";
+import { toFormAnswers } from "../api/plans.api";
+import { useNutritionPreview } from "../hooks/usePlan";
+import type { PlanData, PlanInput } from "../types";
+import { emptyBody, isBodyEmpty, parseBody, type BodyErrors } from "../utils/body";
 import {
       activities,
       allergies,
@@ -18,28 +20,26 @@ import {
       defaultPrefs,
       dietStyles,
       dishOptions,
-      fibreFor,
       formatCop,
-      goalFor,
       goals,
       levels,
-      objectiveFor,
-      scaleTargets,
-      startingCalories,
       stores,
       useOnboardingPrefs,
       type Goal,
       type OnboardingPrefs,
 } from "../utils/onboarding";
+import BodyStep from "./BodyStep";
 import { CheckMark, Chip, GroupLabel, OptionCard, RoundStepper, StepHeader, StepTitle, ToneIcon } from "./OnboardingUI";
+import StartingPoint from "./StartingPoint";
 
 type PlanFormProps = {
-      initial?: NutritionPlan | null;
+      initial?: PlanData | null;
       /** Last-step button text ("Crear mi chef" / "Guardar cambios"). */
       submitLabel: string;
       submitting: boolean;
       error?: string | null;
-      onSubmit: (input: PlanInput) => void;
+      /** `before` is what the form started with, to send only the changes. */
+      onSubmit: (input: PlanInput, before: PlanInput) => void;
       /** Leaves the flow from step 1 (back arrow). */
       onExit: () => void;
       /** Onboarding only: "Saltar" on each step and "Lo haré más tarde" on the first. */
@@ -48,39 +48,53 @@ type PlanFormProps = {
       initialStep?: number;
 };
 
-export const planSteps = ["Objetivo", "Ritmo", "Restricciones", "Gustos", "Tu cocina", "Compras"];
+export const planSteps = ["Objetivo", "Ritmo", "Sobre ti", "Restricciones", "Gustos", "Tu cocina", "Compras"];
 const last = planSteps.length - 1;
+const BODY_STEP = 2;
 const MAX_GOALS = 2;
 
-const kcal = new Intl.NumberFormat("es", { useGrouping: "always" });
 const toggle = <T,>(list: T[], value: T) => (list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
 
 export default function PlanForm({ initial, submitLabel, submitting, error, onSubmit, onExit, onSkip, initialStep = 0 }: PlanFormProps) {
       const [savedPrefs, savePrefs] = useOnboardingPrefs();
       const [step, setStep] = useState(initialStep);
-      const [prefs, setPrefs] = useState<OnboardingPrefs>(() => ({
-            ...defaultPrefs,
-            ...savedPrefs,
-            goals: savedPrefs?.goals ?? (initial ? [goalFor(initial.objective)] : []),
-            stores: savedPrefs?.stores ?? [],
+      // What the API has now (editing) or the defaults (new account); changes are measured against it.
+      const [before] = useState<PlanInput>(() => ({
+            ...(initial ? toFormAnswers(initial, savedPrefs) : { prefs: { ...defaultPrefs, ...savedPrefs }, body: emptyBody, restrictions: [], mealsPerDay: 3 }),
+            kcalTarget: null,
+            kcalAdjusted: false,
       }));
-      const [restrictions, setRestrictions] = useState<string[]>(initial?.restrictions ?? []);
+      const [prefs, setPrefs] = useState<OnboardingPrefs>(before.prefs);
+      const [restrictions, setRestrictions] = useState<string[]>(before.restrictions);
       const [customRestriction, setCustomRestriction] = useState("");
-      const [mealsPerDay, setMealsPerDay] = useState(initial?.mealsPerDay ?? 3);
-      // null: follow the suggestion for the chosen goals and activity until the user nudges it.
-      const [caloriesDraft, setCaloriesDraft] = useState<number | null>(initial?.targets.calories ?? null);
-      const [scanOpen, setScanOpen] = useState(false);
+      const [mealsPerDay, setMealsPerDay] = useState(before.mealsPerDay);
+      // null: the saved target, or the suggestion for the chosen goals and activity, until the user nudges it.
+      const [caloriesDraft, setCaloriesDraft] = useState<number | null>(null);
 
       const update = (patch: Partial<OnboardingPrefs>) => setPrefs((p) => ({ ...p, ...patch }));
-      const objective = objectiveFor(prefs.goals, initial?.objective);
-      const t = initial?.targets;
-      // Keep the user's own macro split when they had one; otherwise the goal's general reference.
-      const reference =
-            t?.calories && t.proteinGrams && t.carbohydratesGrams && t.fatGrams
-                  ? { calories: t.calories, proteinGrams: t.proteinGrams, carbohydratesGrams: t.carbohydratesGrams, fatGrams: t.fatGrams }
-                  : suggestedTargets[objective];
-      const calories = caloriesDraft ?? startingCalories(suggestedTargets[objective].calories, prefs.activity);
-      const targets = scaleTargets(reference, calories);
+      const [body, setBody] = useState(before.body);
+      const [bodyErrors, setBodyErrors] = useState<BodyErrors>({});
+      // Health data leaves the device only once the user agreed to it.
+      const parsedBody = parseBody(body);
+      const bodyKey = JSON.stringify(body.consent ? parsedBody.biometrics : null);
+      const debouncedKey = useDebounced(bodyKey, 400);
+      const biometrics = useMemo(() => JSON.parse(debouncedKey) as typeof parsedBody.biometrics, [debouncedKey]);
+      const previewQuery = useNutritionPreview({ goals: prefs.goals, activity: prefs.activity, biometrics });
+      const preview = previewQuery.data;
+      // Same rule as the backend: new goals, activity or body recalculate the target.
+      const bodyChanged = JSON.stringify(before.body.consent ? parseBody(before.body).biometrics : null) !== bodyKey;
+      const recalculated = bodyChanged || prefs.activity !== before.prefs.activity || prefs.goals.join() !== before.prefs.goals.join();
+      const savedKcal = initial && !recalculated ? initial.nutritionTargets.kcal : null;
+      const calories = caloriesDraft ?? savedKcal ?? preview?.kcal ?? null;
+      const range = preview?.range ?? { min: 1400, max: 4000, step: 50 };
+      const grams = (pct: number | undefined, kcalPerGram: number) =>
+            calories === null || pct === undefined ? null : Math.round((calories * pct) / 100 / kcalPerGram);
+      const targets = {
+            protein: grams(preview?.macroSplit.proteinPct, 4),
+            carbs: grams(preview?.macroSplit.carbsPct, 4),
+            fat: grams(preview?.macroSplit.fatPct, 9),
+            fibre: calories === null || !preview ? null : Math.round((calories / 1000) * preview.fiberGPer1000Kcal),
+      };
 
       const style = dietStyles.find((s) => s !== "Omnívoro" && restrictions.includes(s)) ?? "Omnívoro";
       const known = new Set([...dietStyles, ...allergies, ...cares]);
@@ -95,13 +109,39 @@ export default function PlanForm({ initial, submitLabel, submitting, error, onSu
       };
 
       const submit = () => {
-            savePrefs(prefs);
-            onSubmit({ objective, targets, restrictions, mealsPerDay });
+            const answers = { ...prefs, flexitarian: restrictions.includes("Flexitariano") };
+            savePrefs(answers);
+            // The recommended number the user saw is the one saved, as long as it belongs to these answers.
+            const suggested = biometrics && debouncedKey === bodyKey && !previewQuery.isPlaceholderData && (!initial || recalculated) ? (preview?.kcal ?? null) : null;
+            onSubmit({ prefs: answers, body, restrictions, mealsPerDay, kcalTarget: caloriesDraft ?? suggested, kcalAdjusted: caloriesDraft !== null }, before);
       };
-      const next = () => (step < last ? setStep(step + 1) : submit());
+      const next = () => {
+            if (step === BODY_STEP && !isBodyEmpty(body)) {
+                  const errors: BodyErrors = { ...parsedBody.errors };
+                  if (!body.consent) errors.consent = "Marca la casilla para usar estos datos, o bórralos para seguir sin ellos.";
+                  setBodyErrors(errors);
+                  if (Object.keys(errors).length) return;
+            }
+            if (step < last) setStep(step + 1);
+            else submit();
+      };
+      const skipStep = () => {
+            if (step === BODY_STEP) {
+                  setBody(before.body);
+                  setBodyErrors({});
+            }
+            setStep(step + 1);
+      };
+      const startingNote =
+            preview?.basis !== "biometrics"
+                  ? "Es un promedio: con tu edad, peso y estatura lo calculo para ti."
+                  : preview.bodyFatPct != null
+                    ? `Calculado con tus datos y tus medidas (≈ ${Math.round(preview.bodyFatPct)}% de grasa corporal).`
+                    : "Calculado con tu edad, peso y estatura. No reemplaza a un profesional de salud.";
+      const startingPoint = <StartingPoint calories={calories} range={range} targets={targets} note={startingNote} onChange={setCaloriesDraft} />;
       const back = () => (step === 0 ? onExit() : setStep(step - 1));
 
-      const count = step === 0 ? prefs.goals.length : step === 2 ? chosenRestrictions : step === 3 ? prefs.dishes.length : 0;
+      const count = step === 0 ? prefs.goals.length : step === 3 ? chosenRestrictions : step === 4 ? prefs.dishes.length : 0;
       const nextLabel = step === last ? submitLabel : count > 0 ? `Siguiente · ${count} ${count === 1 ? "elegido" : "elegidos"}` : "Siguiente";
 
       return (
@@ -112,7 +152,7 @@ export default function PlanForm({ initial, submitLabel, submitting, error, onSu
                         label={planSteps[step]!}
                         backLabel={step === 0 ? "Salir" : "Paso anterior"}
                         onBack={back}
-                        onSkip={onSkip && step < last ? () => setStep(step + 1) : undefined}
+                        onSkip={onSkip && step < last ? skipStep : undefined}
                   />
 
                   <div className="mt-8 flex flex-1 flex-col gap-6 pb-8">
@@ -169,7 +209,7 @@ export default function PlanForm({ initial, submitLabel, submitting, error, onSu
                                                                   checked={checked}
                                                                   onChange={() => {
                                                                         update({ activity: activity.value });
-                                                                        setCaloriesDraft(startingCalories(suggestedTargets[objective].calories, activity.value));
+                                                                        setCaloriesDraft(null);
                                                                   }}
                                                                   className="items-center gap-3 p-3"
                                                             >
@@ -185,43 +225,26 @@ export default function PlanForm({ initial, submitLabel, submitting, error, onSu
                                           </div>
                                     </fieldset>
 
-                                    <section aria-labelledby="starting-point" className="rounded-card bg-plum-glow p-5 text-card shadow-[0_18px_36px_-20px_rgb(43_20_51/0.7)]">
-                                          <div className="flex items-start justify-between gap-3">
-                                                <div>
-                                                      <h2 id="starting-point" className="font-sans text-xs font-extrabold tracking-wider text-secondary-soft uppercase">
-                                                            Punto de partida
-                                                      </h2>
-                                                      <p className="mt-1 flex items-baseline gap-1.5">
-                                                            <span className="font-display text-metric font-extrabold tabular-nums">{kcal.format(calories)}</span>
-                                                            <span className="text-sm font-bold text-secondary-soft">kcal/día</span>
-                                                      </p>
-                                                </div>
-                                                <RoundStepper label="Calorías" value={calories} min={1000} max={5000} step={50} surface="dark" onChange={setCaloriesDraft} />
-                                          </div>
-                                          <dl className="mt-4 grid grid-cols-4 gap-2">
-                                                {(
-                                                      [
-                                                            ["Proteína", targets.proteinGrams, "mint"],
-                                                            ["Carbos", targets.carbohydratesGrams, "rose"],
-                                                            ["Grasas", targets.fatGrams, "mustard"],
-                                                            ["Fibra", fibreFor(calories), "lilac"],
-                                                      ] as const
-                                                ).map(([label, grams, tone]) => (
-                                                      <div key={label} className={`flex flex-col-reverse items-center rounded-control py-2.5 ${tones[tone].soft}`}>
-                                                            <dt className={`text-xs font-extrabold uppercase ${tones[tone].ink}`}>{label}</dt>
-                                                            <dd className="font-display text-title font-extrabold text-ink tabular-nums">{grams}g</dd>
-                                                      </div>
-                                                ))}
-                                          </dl>
-                                          <p className="mt-4 flex items-start gap-2 text-sm text-card/85">
-                                                <Sparkle className="mt-0.5 size-4 shrink-0 text-secondary" />
-                                                Solo es una referencia: tu chef la afina con lo que cocinas y cómo te sientes.
-                                          </p>
-                                    </section>
+                                    {startingPoint}
                               </>
                         )}
 
-                        {step === 2 && (
+                        {step === BODY_STEP && (
+                              <>
+                                    <BodyStep
+                                          value={body}
+                                          errors={bodyErrors}
+                                          onChange={(value) => {
+                                                setBody(value);
+                                                setBodyErrors({});
+                                                setCaloriesDraft(null);
+                                          }}
+                                    />
+                                    {startingPoint}
+                              </>
+                        )}
+
+                        {step === 3 && (
                               <>
                                     <StepTitle title="¿Algo que no comas?">Nunca te lo voy a proponer, ni siquiera en recetas de la comunidad.</StepTitle>
                                     <section aria-labelledby="diet-style">
@@ -288,9 +311,15 @@ export default function PlanForm({ initial, submitLabel, submitting, error, onSu
                               </>
                         )}
 
-                        {step === 3 && (
+                        {step === 4 && (
                               <>
                                     <StepTitle title="¿Qué se te antoja?">Toca los platos que te encantan. Así empiezo a conocer tu sazón.</StepTitle>
+                                    {initial && !savedPrefs && (
+                                          <p className="flex items-start gap-2 rounded-control bg-field p-3 text-sm font-semibold text-ink-muted">
+                                                <Icon name="info" className="mt-0.5 size-4 shrink-0" />
+                                                Ya tienes favoritos guardados. Si marcas platos aquí, los reemplazan.
+                                          </p>
+                                    )}
                                     <fieldset>
                                           <legend className="sr-only">Platos que te encantan</legend>
                                           <div className="grid grid-cols-3 gap-x-3 gap-y-5">
@@ -330,7 +359,7 @@ export default function PlanForm({ initial, submitLabel, submitting, error, onSu
                               </>
                         )}
 
-                        {step === 4 && (
+                        {step === 5 && (
                               <>
                                     <StepTitle title="¿Cómo es tu cocina?">Para proponerte recetas que de verdad vas a hacer.</StepTitle>
                                     <section aria-labelledby="meals" className="flex items-center gap-3 rounded-card bg-peach-glow p-4 shadow-soft">
@@ -340,7 +369,7 @@ export default function PlanForm({ initial, submitLabel, submitting, error, onSu
                                                 </h2>
                                                 <p className="text-xs font-semibold text-ink">Repartiré tus metas entre ellas</p>
                                           </div>
-                                          <RoundStepper label="Comidas al día" value={mealsPerDay} min={1} max={12} onChange={setMealsPerDay} display={(n) => n} />
+                                          <RoundStepper label="Comidas al día" value={mealsPerDay} min={1} max={6} onChange={setMealsPerDay} display={(n) => n} />
                                     </section>
 
                                     <section aria-labelledby="cook-time">
@@ -403,7 +432,7 @@ export default function PlanForm({ initial, submitLabel, submitting, error, onSu
                               </>
                         )}
 
-                        {step === 5 && (
+                        {step === 6 && (
                               <>
                                     <StepTitle title="¿Dónde compras?">Así relaciono marcas y productos reales con tus recetas.</StepTitle>
                                     <fieldset>
@@ -466,20 +495,7 @@ export default function PlanForm({ initial, submitLabel, submitting, error, onSu
                                           </label>
                                     </section>
 
-                                    <button
-                                          type="button"
-                                          onClick={() => setScanOpen(true)}
-                                          className="group flex items-center gap-3 rounded-card bg-plum-glow p-4 text-left text-card shadow-[0_18px_36px_-20px_rgb(43_20_51/0.7)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong"
-                                    >
-                                          <span className="grid size-12 shrink-0 place-items-center rounded-control bg-primary-strong">
-                                                <Icon name="scan" />
-                                          </span>
-                                          <span className="min-w-0 flex-1">
-                                                <span className="block font-display text-title font-extrabold">Escanea tu última factura</span>
-                                                <span className="block text-sm text-card/80">Empiezo a aprender de ti desde hoy</span>
-                                          </span>
-                                          <Icon name="chevronRight" className="size-6 shrink-0 transition-transform group-hover:translate-x-1" />
-                                    </button>
+                                    <ReceiptScanner variant="feature" />
                               </>
                         )}
                   </div>
@@ -502,11 +518,6 @@ export default function PlanForm({ initial, submitLabel, submitting, error, onSu
                         )}
                   </div>
 
-                  <Dialog open={scanOpen} onClose={() => setScanOpen(false)} title="Escanear facturas">
-                        <p className="text-ink-muted">
-                              Muy pronto podrás fotografiar tu factura para que tu chef aprenda qué compras. Por ahora, añade tus ingredientes en Mi despensa.
-                        </p>
-                  </Dialog>
             </div>
       );
 }

@@ -2,63 +2,57 @@ import { Sparkle, Star } from "@/shared/components/ui/Doodles";
 import Icon, { type IconName } from "@/shared/components/ui/Icon";
 import { BrandRing, MascotAvatar } from "@/shared/components/ui/MascotBubble";
 import type { Tone } from "@/shared/lib/tones";
-import type { NutritionPlan } from "../types";
-import { objectiveLabel } from "../utils/labels";
-import { cookTimes, dietStyles, dishOptions, goalLabel, type OnboardingPrefs } from "../utils/onboarding";
+import type { PlanData } from "../types";
 import { ToneIcon } from "./OnboardingUI";
 
 type PlanDoneProps = {
       firstName: string;
-      plan: NutritionPlan;
-      prefs: OnboardingPrefs | null;
+      plan: PlanData;
       /** Opens the flow again on that step (index in planSteps). */
       onEdit: (step: number) => void;
       onContinue: () => void;
 };
 
-const list = (values: string[], empty: string) => (values.length ? values.join(", ") : empty);
+const list = (values: string[], empty: string, separator = ", ") => (values.length ? values.join(separator) : empty);
 
 // «¡Listo, Diana!»: what the chef learned, each answer one tap from being changed.
-export default function PlanDone({ firstName, plan, prefs, onEdit, onContinue }: PlanDoneProps) {
-      const time = cookTimes.find((t) => t.value === prefs?.cookTime)?.label;
+export default function PlanDone({ firstName, plan, onEdit, onContinue }: PlanDoneProps) {
+      const { goals, never, loves, kitchen, shopping } = plan.summary;
       const rows: { label: string; value: string; icon: IconName; tone: Tone; step: number }[] = [
             {
                   label: "Objetivo",
-                  value: prefs?.goals.length ? prefs.goals.map(goalLabel).join(" · ") : objectiveLabel(plan.objective),
+                  value: list(goals.map((g) => g.label), "Sin objetivo", " · "),
                   icon: "target",
                   tone: "mint",
                   step: 0,
             },
             {
                   label: "Nunca",
-                  value: list(
-                        plan.restrictions.filter((r) => !dietStyles.includes(r)),
-                        plan.restrictions.length ? plan.restrictions.join(", ") : "Sin restricciones",
-                  ),
+                  value: list(never.map((n) => n.label), "Sin restricciones"),
                   icon: "alert",
                   tone: "rose",
-                  step: 2,
-            },
-            {
-                  label: "Te encanta",
-                  value: list(dishOptions.filter((d) => prefs?.dishes.includes(d.value)).map((d) => d.label), "Aún por descubrir"),
-                  icon: "heart",
-                  tone: "peach",
                   step: 3,
             },
             {
-                  label: "Tu cocina",
-                  value: [`${plan.mealsPerDay ?? 3} comidas`, time, prefs?.appliances[0]].filter(Boolean).join(" · "),
-                  icon: "kitchen",
-                  tone: "mustard",
+                  label: "Te encanta",
+                  value: list(loves.map((l) => l.label), "Aún por descubrir"),
+                  icon: "heart",
+                  tone: "peach",
                   step: 4,
             },
             {
+                  label: "Tu cocina",
+                  value: [`${kitchen.mealsPerDay} comidas`, kitchen.maxCookingMinutes === null ? "Sin prisa" : `${kitchen.maxCookingMinutes} min`, kitchen.equipment[0]?.label].filter(Boolean).join(" · "),
+                  icon: "kitchen",
+                  tone: "mustard",
+                  step: 5,
+            },
+            {
                   label: "Compras",
-                  value: [list(prefs?.stores ?? [], "Sin tiendas"), prefs?.budget ? `$${Math.round(prefs.budget / 1000)}k/sem` : null].filter(Boolean).join(" · "),
+                  value: `${list(shopping.stores.map((x) => x.name), "Sin tiendas")} · $${Math.round(shopping.weeklyBudget.amount / 1000)}k/sem`,
                   icon: "cart",
                   tone: "sky",
-                  step: 5,
+                  step: 6,
             },
       ];
 

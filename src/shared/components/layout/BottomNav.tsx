@@ -4,16 +4,16 @@ import { MascotAvatar } from "../ui/MascotBubble";
 
 type Item = { to: string; label: string; icon?: IconName; end?: boolean; match?: (path: string, search: string) => boolean };
 
-// "Mi cocina" covers the pantry and the shopping list; "Comunidad" is the community tab of recipes.
+// "Mi cocina" covers pantry, shopping list, week, cooked recipes and receipts; "Comunidad" is the community tab of recipes.
 const items: Item[] = [
       { to: "/", label: "Inicio", icon: "home", end: true },
-      { to: "/despensa", label: "Mi cocina", icon: "kitchen", match: (path) => path.startsWith("/despensa") || path.startsWith("/compras") },
+      { to: "/despensa", label: "Mi cocina", icon: "kitchen", match: (path) => ["/despensa", "/compras", "/semana", "/cocinadas", "/facturas"].some((p) => path.startsWith(p)) },
       { to: "/chef", label: "Tu chef" },
       {
             to: "/recetas?ver=comunidad",
             label: "Comunidad",
             icon: "community",
-            match: (path, search) => path.startsWith("/comunidad") || (path.startsWith("/recetas") && search.includes("ver=comunidad")),
+            match: (path, search) => path.startsWith("/recetas") && search.includes("ver=comunidad"),
       },
       { to: "/perfil", label: "Perfil", icon: "user" },
 ];

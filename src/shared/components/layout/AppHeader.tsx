@@ -13,9 +13,8 @@ const focusRing = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-
 export default function AppHeader() {
       const { user } = useAuth();
       const [open, setOpen] = useState(false);
-      const { items, unread, markSeen } = useNotifications();
-      // Snapshot what was unread when the dialog opened, so marking it seen does not empty the list.
-      const [shown, setShown] = useState(items);
+      const shown = useNotifications();
+      const unread = shown.length > 0;
       const firstName = user?.name.split(" ")[0] ?? "";
 
       return (
@@ -29,12 +28,8 @@ export default function AppHeader() {
 
                   <button
                         type="button"
-                        aria-label={unread ? `Notificaciones, ${items.length} sin leer` : "Notificaciones"}
-                        onClick={() => {
-                              setShown(items);
-                              setOpen(true);
-                              markSeen();
-                        }}
+                        aria-label={unread ? `Notificaciones, ${shown.length} pendientes` : "Notificaciones"}
+                        onClick={() => setOpen(true)}
                         className={`relative grid size-11 shrink-0 place-items-center rounded-full bg-primary-soft text-primary-strong transition-colors hover:bg-rose-soft ${focusRing}`}
                   >
                         <svg viewBox="0 0 24 24" className="size-6" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -64,7 +59,7 @@ export default function AppHeader() {
                                                       onClick={() => setOpen(false)}
                                                       className="flex items-center gap-3 rounded-control bg-field p-3 text-sm font-semibold text-ink hover:bg-line focus-visible:outline-2 focus-visible:outline-primary-strong"
                                                 >
-                                                      <Icon name={item.id === "shopping" ? "cart" : "book"} className="size-5 shrink-0 text-primary-strong" />
+                                                      <Icon name={item.id === "email" ? "mail" : item.id === "chef" ? "chef" : "flame"} className="size-5 shrink-0 text-primary-strong" />
                                                       <span className="flex-1">{item.text}</span>
                                                       <Icon name="arrowRight" className="size-4 shrink-0" />
                                                 </Link>

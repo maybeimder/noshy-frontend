@@ -1,5 +1,6 @@
 import { lazy } from "react";
-import { Navigate, type RouteObject } from "react-router-dom";
+import { Navigate, useParams, type RouteObject } from "react-router-dom";
+import OnboardingGate from "@/modules/auth/components/OnboardingGate";
 import { GuestOnlyRoute, ProtectedRoute } from "@/modules/auth/components/RouteGuards";
 import AppShell from "@/shared/components/layout/AppShell";
 
@@ -9,16 +10,24 @@ const RegisterPage = lazy(() => import("@/modules/auth/pages/RegisterPage"));
 const HomePage = lazy(() => import("@/modules/cooking/pages/HomePage"));
 const PlanPage = lazy(() => import("@/modules/plans/pages/PlanPage"));
 const PantryPage = lazy(() => import("@/modules/inventory/pages/PantryPage"));
+const ShoppingListPage = lazy(() => import("@/modules/shopping-list/pages/ShoppingListPage"));
+const SharedListPage = lazy(() => import("@/modules/shopping-list/pages/SharedListPage"));
+const WeekPage = lazy(() => import("@/modules/menus/pages/WeekPage"));
+const ReceiptPage = lazy(() => import("@/modules/receipts/pages/ReceiptPage"));
 const ChefPage = lazy(() => import("@/modules/chef/pages/ChefPage"));
 const RecipesPage = lazy(() => import("@/modules/recipes/pages/RecipesPage"));
+const CookedPage = lazy(() => import("@/modules/recipes/pages/CookedPage"));
 const RecipeDetailPage = lazy(() => import("@/modules/recipes/pages/RecipeDetailPage"));
 const RecipeEditorPage = lazy(() => import("@/modules/recipes/pages/RecipeEditorPage"));
-const CommunityRecipePage = lazy(() => import("@/modules/recipes/pages/CommunityRecipePage"));
-const ShoppingListPage = lazy(() => import("@/modules/shopping-list/pages/ShoppingListPage"));
+const CookPage = lazy(() => import("@/modules/cook/pages/CookPage"));
 const ProfilePage = lazy(() => import("@/modules/profile/pages/ProfilePage"));
-const GenerateRecipePage = lazy(() => import("@/modules/food/pages/GenerateRecipePage"));
-const GeneratedRecipePage = lazy(() => import("@/modules/food/pages/GeneratedRecipePage"));
-const LibraryRecipePage = lazy(() => import("@/modules/food/pages/LibraryRecipePage"));
+const SettingsPage = lazy(() => import("@/modules/settings/pages/SettingsPage"));
+
+/** Old links to community recipes: every recipe now lives in /recetas. */
+function ToRecipe() {
+      const { id } = useParams();
+      return <Navigate to={`/recetas/${id}`} replace />;
+}
 
 export const routes: RouteObject[] = [
       {
@@ -29,6 +38,8 @@ export const routes: RouteObject[] = [
                   { path: "/registro", element: <RegisterPage /> },
             ],
       },
+      // Shared shopping list: public.
+      { path: "/l/:token", element: <SharedListPage /> },
       {
             element: <ProtectedRoute />,
             children: [
@@ -36,24 +47,37 @@ export const routes: RouteObject[] = [
                   {
                         element: <AppShell />,
                         children: [
+                              // These three work before onboarding.
                               { path: "/", element: <HomePage /> },
-                              { path: "/despensa", element: <PantryPage /> },
-                              { path: "/chef", element: <ChefPage /> },
-                              { path: "/recetas", element: <RecipesPage /> },
-                              { path: "/recetas/:id", element: <RecipeDetailPage /> },
-                              { path: "/comunidad/:id", element: <CommunityRecipePage /> },
-                              { path: "/explorar/:id", element: <LibraryRecipePage /> },
-                              { path: "/compras", element: <ShoppingListPage /> },
                               { path: "/perfil", element: <ProfilePage /> },
+                              { path: "/ajustes", element: <SettingsPage /> },
+                              {
+                                    element: <OnboardingGate />,
+                                    children: [
+                                          { path: "/despensa", element: <PantryPage /> },
+                                          { path: "/compras", element: <ShoppingListPage /> },
+                                          { path: "/semana", element: <WeekPage /> },
+                                          { path: "/cocinadas", element: <CookedPage /> },
+                                          { path: "/facturas/:id", element: <ReceiptPage /> },
+                                          { path: "/chef", element: <ChefPage /> },
+                                          { path: "/recetas", element: <RecipesPage /> },
+                                          { path: "/recetas/:id", element: <RecipeDetailPage /> },
+                                          { path: "/comunidad/:id", element: <ToRecipe /> },
+                                    ],
+                              },
                         ],
                   },
                   // Focused forms: full screen, no bottom navigation.
                   { path: "/plan/nuevo", element: <PlanPage mode="onboarding" /> },
-                  { path: "/plan/editar", element: <PlanPage mode="edit" /> },
-                  { path: "/recetas/nueva", element: <RecipeEditorPage /> },
-                  { path: "/recetas/:id/editar", element: <RecipeEditorPage /> },
-                  { path: "/recetas/generar", element: <GenerateRecipePage /> },
-                  { path: "/recetas/generada/:id", element: <GeneratedRecipePage /> },
+                  {
+                        element: <OnboardingGate />,
+                        children: [
+                              { path: "/plan/editar", element: <PlanPage mode="edit" /> },
+                              { path: "/recetas/nueva", element: <RecipeEditorPage /> },
+                              { path: "/recetas/:id/editar", element: <RecipeEditorPage /> },
+                              { path: "/cocinar/:id", element: <CookPage /> },
+                        ],
+                  },
             ],
       },
       { path: "*", element: <Navigate to="/" replace /> },

@@ -1,15 +1,18 @@
+export type OnboardingStatus = "pending" | "inProgress" | "completed";
+
 export type User = {
       id: string;
       name: string;
+      lastName?: string | null;
       email: string;
-      /** Optional until the backend ships it (backend/recommendation.md §1). */
+      emailVerified: boolean;
       avatarUrl?: string | null;
+      onboardingStatus: OnboardingStatus;
 };
 
-export type AuthResponse = {
-      user: User;
-      token: string;
-};
+export type Tokens = { accessToken: string; refreshToken: string; expiresIn: number };
+
+export type AuthResponse = { user: User; tokens: Tokens };
 
 export type LoginInput = {
       email: string;
