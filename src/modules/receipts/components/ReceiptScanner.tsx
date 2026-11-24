@@ -6,8 +6,8 @@ import { receiptsApi } from "../api/receipts.api";
 
 const MAX_BYTES = 10 * 1024 * 1024;
 
-/** Uploads a receipt; the backend reads it in the background. "feature": the big plum card of onboarding. */
-export default function ReceiptScanner({ variant = "row" }: { variant?: "row" | "feature" }) {
+/** Uploads a receipt; the backend reads it in the background. "feature": the big plum card of onboarding · "button": the pink square of Mi despensa. */
+export default function ReceiptScanner({ variant = "row" }: { variant?: "row" | "feature" | "button" }) {
       const id = useId();
       const upload = useMutation({ mutationFn: receiptsApi.upload });
       const [localError, setLocalError] = useState<string | null>(null);
@@ -20,6 +20,45 @@ export default function ReceiptScanner({ variant = "row" }: { variant?: "row" | 
             if (!tooBig) upload.mutate(file);
       };
       const error = localError ?? upload.error?.message;
+
+      if (variant === "button") {
+            return (
+                  <>
+                        <label
+                              htmlFor={id}
+                              aria-label={upload.isPending ? "Subiendo tu factura" : "Escanear una factura"}
+                              className={`grid size-12 shrink-0 cursor-pointer place-items-center rounded-control bg-brand text-card shadow-brand has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-primary-strong ${upload.isPending ? "pointer-events-none animate-pulse" : ""}`}
+                        >
+                              <Icon name="scan" />
+                              <input
+                                    id={id}
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/heic,application/pdf"
+                                    disabled={upload.isPending}
+                                    onChange={(e) => {
+                                          pick(e.target.files?.[0]);
+                                          e.target.value = "";
+                                    }}
+                                    className="sr-only"
+                              />
+                        </label>
+                        {(error || upload.data) && (
+                              <p
+                                    role={error ? "alert" : "status"}
+                                    className={`fixed inset-x-5 bottom-28 z-30 mx-auto flex max-w-md flex-wrap items-center gap-x-2 rounded-control p-3 text-sm font-bold shadow-soft ${error ? "bg-card text-error" : "bg-mint-soft text-mint-ink"}`}
+                              >
+                                    <Icon name={error ? "alert" : "check"} className="size-4" strokeWidth={2.5} />
+                                    {error ?? "Estoy leyendo tu factura."}
+                                    {!error && upload.data && (
+                                          <Link to={`/facturas/${upload.data.receiptId}`} className="underline underline-offset-4">
+                                                Ver factura
+                                          </Link>
+                                    )}
+                              </p>
+                        )}
+                  </>
+            );
+      }
 
       return (
             <div className="flex flex-col gap-2">

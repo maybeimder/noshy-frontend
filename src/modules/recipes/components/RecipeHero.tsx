@@ -1,20 +1,23 @@
 import type { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import DishCover from "@/shared/components/ui/DishArt";
-import { Star, Steam } from "@/shared/components/ui/Doodles";
 import Icon from "@/shared/components/ui/Icon";
-import { roundButtonClass } from "@/shared/components/ui/RoundButton";
 import Photo from "@/shared/components/ui/Photo";
 
 type RecipeHeroProps = {
       recipe: { id: string; title: string; imageUrl: string | null };
       backTo: string;
-      /** Top-right control (like, edit…). */
+      /** Top-right controls (share, like, edit…). */
       action?: ReactNode;
+      /** Text laid over the bottom of the photo (cuisine, title, meta). */
+      children?: ReactNode;
 };
 
-// Full-bleed cover with floating round buttons; the page body overlaps it with a rounded top.
-export default function RecipeHero({ recipe, backTo, action }: RecipeHeroProps) {
+export const heroButtonClass =
+      "relative grid size-12 shrink-0 place-items-center rounded-full bg-plum/45 text-card backdrop-blur-md transition-colors hover:bg-plum/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-card disabled:opacity-60";
+
+// Full-bleed photo with glass buttons; the title sits on a dark scrim at its foot and the page body overlaps it.
+export default function RecipeHero({ recipe, backTo, action, children }: RecipeHeroProps) {
       const navigate = useNavigate();
 
       const goBack = () => {
@@ -24,27 +27,25 @@ export default function RecipeHero({ recipe, backTo, action }: RecipeHeroProps) 
       };
 
       return (
-            <div className="relative mx-auto h-80 max-w-xl overflow-hidden">
-                  <Photo
-                        url={recipe.imageUrl}
-                        alt={`Foto de ${recipe.title}`}
-                        width={960}
-                        height={640}
-                        className="size-full object-cover"
-                        fallback={
-                              <>
-                                    <DishCover seed={recipe.id} layout="hero" className="size-full" />
-                                    <Steam className="absolute top-3 left-1/2 size-7 -translate-x-1/2 text-plate/80" />
-                              </>
-                        }
-                  />
-                  <Star className="absolute right-12 bottom-16 size-6 rotate-12 text-secondary" />
+            <div className={`relative mx-auto max-w-xl overflow-hidden bg-plum ${children ? "min-h-[28rem]" : "h-80"}`}>
+                  <span className="absolute inset-0">
+                        <Photo
+                              url={recipe.imageUrl}
+                              alt={`Foto de ${recipe.title}`}
+                              width={960}
+                              height={1080}
+                              className="size-full object-cover"
+                              fallback={<DishCover seed={recipe.id} layout="hero" className="size-full" />}
+                        />
+                  </span>
+                  <span aria-hidden className="absolute inset-0 bg-[linear-gradient(180deg,rgb(29_9_44/0.45)_0%,transparent_25%,transparent_40%,rgb(29_9_44/0.9)_85%)]" />
                   <div className="absolute top-5 left-5">
-                        <button type="button" onClick={goBack} aria-label="Volver" className={roundButtonClass("card")}>
+                        <button type="button" onClick={goBack} aria-label="Volver" className={heroButtonClass}>
                               <Icon name="back" />
                         </button>
                   </div>
                   {action && <div className="absolute top-5 right-5">{action}</div>}
+                  {children && <div className="relative flex min-h-[28rem] flex-col justify-end px-5 pt-24 pb-14 text-card">{children}</div>}
             </div>
       );
 }

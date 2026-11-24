@@ -2,14 +2,14 @@ import { useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import IngredientSearch from "@/modules/inventory/components/IngredientSearch";
 import VerifyEmail from "@/modules/settings/components/VerifyEmail";
-import PageHeader from "@/shared/components/layout/PageHeader";
 import Button from "@/shared/components/ui/Button";
-import Chips from "@/shared/components/ui/Chips";
 import FormAlert from "@/shared/components/ui/FormAlert";
 import Icon from "@/shared/components/ui/Icon";
 import ImagePicker from "@/shared/components/ui/ImagePicker";
 import { ErrorState } from "@/shared/components/ui/QueryState";
-import Stepper from "@/shared/components/ui/Stepper";
+import MacroTiles from "@/shared/components/ui/MacroTiles";
+import { MascotAvatar } from "@/shared/components/ui/MascotBubble";
+import RoundButton from "@/shared/components/ui/RoundButton";
 import TextField, { fieldClass } from "@/shared/components/ui/TextField";
 import { ApiError, newKey } from "@/shared/lib/axios";
 import type { UploadedMedia } from "@/shared/lib/upload";
@@ -17,7 +17,7 @@ import { parseAmount, unitLabel } from "@/shared/lib/units";
 import type { Macros, Unit } from "@/shared/types/api";
 import { EditorSkeleton } from "../components/RecipeSkeletons";
 import { useMyRecipeMutations, useRecipe } from "../hooks/useRecipes";
-import type { Difficulty, Heat, MyRecipePatch, RecipeDetail } from "../types";
+import type { ChefConsultable, Difficulty, Heat, MyRecipePatch, RecipeDetail } from "../types";
 
 const removeButton =
       "grid size-11 shrink-0 place-items-center rounded-control text-ink-muted hover:bg-field hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong disabled:invisible";
@@ -34,12 +34,25 @@ const heatOf = (level: number): Heat | "" => (level >= 8 ? "high" : level >= 5 ?
 
 export default function RecipeEditorPage() {
       const { id } = useParams();
+      const navigate = useNavigate();
       // As written by the author: the adapted version would overwrite it on save.
       const recipe = useRecipe(id, { adapted: false });
 
       return (
             <div className="min-h-dvh bg-canvas">
-                  <PageHeader title={id ? "Editar receta" : "Nueva receta"} scribble="pink" decoration="star" backTo="/recetas" />
+                  <header className="mx-auto grid max-w-xl grid-cols-[3rem_1fr_auto] items-center gap-3 px-5 pt-6 pb-3">
+                        <RoundButton label="Cerrar" onClick={() => navigate(id ? `/recetas/${id}` : "/recetas", { replace: true })}>
+                              <Icon name="close" />
+                        </RoundButton>
+                        <h1 className="text-center font-display text-title font-extrabold text-ink">{id ? "Editar receta" : "Nueva receta"}</h1>
+                        <button
+                              type="submit"
+                              form="recipe-form"
+                              className="min-h-11 rounded-control px-1 text-sm font-extrabold text-primary-strong focus-visible:outline-2 focus-visible:outline-primary-strong"
+                        >
+                              Borrador
+                        </button>
+                  </header>
                   {!id ? (
                         <main>
                               <RecipeForm />
@@ -88,7 +101,9 @@ function RecipeForm({ initial }: { initial?: RecipeDetail }) {
             const loaded = initial?.steps?.map((s) => ({ text: s.text, minutes: s.timerSeconds ? String(Math.round((s.timerSeconds / 60) * 10) / 10).replace(".", ",") : "", heat: heatOf(s.heatLevel) })) ?? [];
             return loaded.length ? loaded : [{ text: "", minutes: "", heat: "" }];
       });
-      const [consultable, setConsultable] = useState<boolean | null>(null);
+      const [consultable, setConsultable] = useState<ChefConsultable | null>(null);
+      const chef: ChefConsultable = consultable ?? { enabled: initial?.chefConsultable ?? false, useMyStyle: true, suggestSubstitutes: true };
+      const [open, setOpen] = useState<{ ingredients: boolean; steps: boolean }>({ ingredients: !initial, steps: !initial });
       const [errors, setErrors] = useState<Record<string, string>>({});
       const [saved, setSaved] = useState<{ macros: Macros | null; partial: boolean } | null>(null);
       const busy = create.isPending || update.isPending || publish.isPending;
@@ -126,7 +141,7 @@ function RecipeForm({ initial }: { initial?: RecipeDetail }) {
                   ...(totalTime ? { totalTimeMinutes: Math.round(totalTime) } : {}),
                   ...(difficulty ? { difficulty } : {}),
                   ...(cover ? { coverMediaId: cover.id } : {}),
-                  ...(consultable !== null ? { chefConsultable: { enabled: consultable, useMyStyle: consultable, suggestSubstitutes: consultable } } : {}),
+                  ...(consultable !== null ? { chefConsultable: consultable } : {}),
             };
             try {
                   const id = recipeId ?? (await create.mutateAsync({ title: title.trim(), key: createKey })).id;
@@ -150,109 +165,258 @@ function RecipeForm({ initial }: { initial?: RecipeDetail }) {
       const setIngredient = (index: number, change: Partial<IngredientDraft>) => setIngredients((list) => list.map((item, i) => (i === index ? { ...item, ...change } : item)));
       const setStep = (index: number, change: Partial<StepDraft>) => setSteps((list) => list.map((item, i) => (i === index ? { ...item, ...change } : item)));
 
+      const macros = saved?.macros ?? (initial ? initial.nutritionPerServing : null);
+      const timed = steps.filter((st) => st.text.trim() && st.minutes.trim()).length;
+      const written = steps.filter((st) => st.text.trim()).length;
+      const levelIndex = difficulties.findIndex((d) => d.id === difficulty);
+      const tile = "flex min-h-20 flex-col justify-between gap-1 rounded-card bg-primary-soft p-3 text-ink";
+      const tileLabel = "flex items-center gap-1 text-xs font-extrabold text-rose-ink";
+      const toggleChip = (on: boolean) =>
+            `inline-flex min-h-10 items-center gap-1.5 rounded-full px-3 text-xs font-extrabold focus-visible:outline-2 focus-visible:outline-card ${on ? "bg-card/20 text-card" : "bg-transparent text-card/60 ring-1 ring-card/30"}`;
+
       return (
-            <form noValidate onSubmit={onSave} className="mx-auto flex max-w-xl flex-col gap-6 px-5 pt-3">
-                  <ImagePicker label="Foto de la receta" purpose="recipeCover" value={cover?.url ?? initial?.imageUrl ?? null} onChange={setCover} removable={false} />
+            <form id="recipe-form" noValidate onSubmit={onSave} className="mx-auto flex max-w-xl flex-col gap-5 px-5 pt-1 pb-6">
+                  <ImagePicker label="Foto de la receta" purpose="recipeCover" shape="hero" value={cover?.url ?? initial?.imageUrl ?? null} onChange={setCover} removable={false}>
+                        <label htmlFor="recipe-title" className="text-xs font-extrabold tracking-wider text-secondary-soft uppercase">
+                              Nombre
+                        </label>
+                        <input
+                              id="recipe-title"
+                              maxLength={120}
+                              placeholder="Ponle nombre a tu receta"
+                              value={title}
+                              onChange={(e) => setTitle(e.target.value)}
+                              aria-invalid={errors.title ? true : undefined}
+                              className="w-full rounded-control bg-transparent font-display text-section leading-tight font-extrabold text-card placeholder:text-card/60 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-card"
+                        />
+                        {errors.title && <p className="text-sm font-bold text-secondary-soft">{errors.title}</p>}
+                  </ImagePicker>
 
-                  <TextField label="Nombre de la receta" tone="card" maxLength={120} placeholder="Ej. Pasta rosa con pollo" value={title} onChange={(e) => setTitle(e.target.value)} error={errors.title} />
-                  <TextField label="Tiempo total" tone="card" inputMode="numeric" suffix="min" value={minutes} onChange={(e) => setMinutes(e.target.value)} error={errors.minutes} />
-                  <div className="flex flex-col gap-2">
-                        <span className="text-sm font-bold text-ink">Porciones</span>
-                        <Stepper label="Porciones" value={servings} min={1} max={20} onChange={setServings} suffix="porciones" />
+                  <div className="grid grid-cols-3 gap-2">
+                        <label className={tile}>
+                              <span className={tileLabel}>
+                                    <Icon name="clock" className="size-4" />
+                                    Tiempo
+                              </span>
+                              <span className="flex items-baseline gap-1">
+                                    <input
+                                          inputMode="numeric"
+                                          placeholder="—"
+                                          value={minutes}
+                                          onChange={(e) => setMinutes(e.target.value)}
+                                          aria-invalid={errors.minutes ? true : undefined}
+                                          className="w-12 rounded bg-transparent font-display text-title font-extrabold tabular-nums placeholder:text-ink-muted focus-visible:outline-2 focus-visible:outline-primary-strong"
+                                    />
+                                    <span className="text-sm font-bold">min</span>
+                              </span>
+                        </label>
+                        <div className={tile}>
+                              <span className={tileLabel}>
+                                    <Icon name="community" className="size-4" />
+                                    Porciones
+                              </span>
+                              <span role="group" aria-label="Porciones" className="flex items-center justify-between">
+                                    <button type="button" aria-label="Una porción menos" disabled={servings <= 1} onClick={() => setServings((n) => Math.max(1, n - 1))} className="grid size-8 place-items-center rounded-full bg-card/70 disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-primary-strong">
+                                          <Icon name="minus" className="size-4" strokeWidth={2.5} />
+                                    </button>
+                                    <output aria-live="polite" className="font-display text-title font-extrabold tabular-nums">
+                                          {servings}
+                                    </output>
+                                    <button type="button" aria-label="Una porción más" disabled={servings >= 20} onClick={() => setServings((n) => Math.min(20, n + 1))} className="grid size-8 place-items-center rounded-full bg-card/70 disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-primary-strong">
+                                          <Icon name="plus" className="size-4" strokeWidth={2.5} />
+                                    </button>
+                              </span>
+                        </div>
+                        <button
+                              type="button"
+                              onClick={() => setDifficulty(difficulties[(levelIndex + 1) % difficulties.length]!.id)}
+                              aria-label={`Nivel: ${difficulties[levelIndex]?.label ?? "sin elegir"}. Cambiar`}
+                              className={`${tile} text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong`}
+                        >
+                              <span className={tileLabel}>
+                                    <Icon name="flame" className="size-4" />
+                                    Nivel
+                              </span>
+                              <span className="font-display text-title font-extrabold">{difficulties[levelIndex]?.label ?? "Elegir"}</span>
+                        </button>
                   </div>
-                  <div className="flex flex-col gap-1">
-                        <span className="text-sm font-bold text-ink">Dificultad</span>
-                        <Chips<Difficulty | ""> bleed label="Dificultad" options={difficulties} value={difficulty} onChange={setDifficulty} />
-                  </div>
+                  {errors.minutes && <p className="-mt-3 text-sm font-semibold text-error">{errors.minutes}</p>}
 
-                  <fieldset className="flex flex-col gap-3">
-                        <legend className="mb-3 font-display text-section font-extrabold text-ink">Ingredientes</legend>
-                        <ul className="flex flex-col gap-2">
-                              {ingredients.map((item, index) => (
-                                    <li key={`${item.ingredientId}-${index}`} className="flex flex-col gap-2 rounded-card bg-card p-3">
-                                          <div className="flex items-center gap-2">
-                                                <span className="min-w-0 flex-1 truncate font-bold text-ink">{item.label}</span>
-                                                <button type="button" aria-label={`Quitar ${item.label}`} onClick={() => setIngredients((list) => list.filter((_, i) => i !== index))} className={removeButton}>
+                  <section aria-labelledby="macros" className="flex flex-col gap-3">
+                        <div className="flex items-baseline justify-between gap-3">
+                              <h2 id="macros" className="text-title font-extrabold text-ink">
+                                    Macros por porción
+                              </h2>
+                              <span className="flex items-center gap-1 text-xs font-extrabold text-primary-strong">
+                                    <Icon name="sparkle" className="size-3.5" strokeWidth={2.25} />
+                                    {saved?.partial ? "Aproximadas por tu chef" : "Calculadas por tu chef"}
+                              </span>
+                        </div>
+                        {macros && macros.kcal > 0 ? (
+                              <MacroTiles macros={macros} />
+                        ) : (
+                              <p className="rounded-card bg-card p-4 text-sm text-ink-muted shadow-soft">Agrega ingredientes y guarda el borrador: tu chef calcula las macros.</p>
+                        )}
+                  </section>
+
+                  <section className="overflow-hidden rounded-card bg-card shadow-soft">
+                        <button
+                              type="button"
+                              aria-expanded={open.ingredients}
+                              onClick={() => setOpen((o) => ({ ...o, ingredients: !o.ingredients }))}
+                              className="flex min-h-16 w-full items-center gap-3 p-3 text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-strong"
+                        >
+                              <span className="grid size-11 shrink-0 place-items-center rounded-control bg-rose-soft text-rose-ink">
+                                    <Icon name="cart" className="size-5" />
+                              </span>
+                              <span className="min-w-0 flex-1">
+                                    <span className="block font-display font-extrabold text-ink">Ingredientes</span>
+                                    <span className="block text-sm text-ink-muted">
+                                          {ingredients.length === 0 ? "Aún no hay ninguno" : `${ingredients.length} ${ingredients.length === 1 ? "añadido" : "añadidos"}${macros && macros.kcal > 0 ? " · macros calculados" : ""}`}
+                                    </span>
+                              </span>
+                              <Icon name="chevronRight" className={`size-5 shrink-0 text-ink-muted transition-transform ${open.ingredients ? "rotate-90" : ""}`} />
+                        </button>
+                        {open.ingredients && (
+                              <div className="flex flex-col gap-3 border-t border-line p-3">
+                                    <ul className="flex flex-col gap-2">
+                                          {ingredients.map((item, index) => (
+                                                <li key={`${item.ingredientId}-${index}`} className="flex flex-col gap-2 rounded-control bg-field p-3">
+                                                      <div className="flex items-center gap-2">
+                                                            <span className="min-w-0 flex-1 truncate font-bold text-ink">{item.label}</span>
+                                                            <button type="button" aria-label={`Quitar ${item.label}`} onClick={() => setIngredients((list) => list.filter((_, i) => i !== index))} className={removeButton}>
+                                                                  <Icon name="trash" className="size-5" />
+                                                            </button>
+                                                      </div>
+                                                      <div className="grid grid-cols-[1fr_auto] gap-2">
+                                                            <TextField label={`Cantidad de ${item.label}`} hideLabel tone="card" placeholder="Cantidad" inputMode="decimal" value={item.amount} onChange={(e) => setIngredient(index, { amount: e.target.value })} error={errors[`ingredient-${index}`]} />
+                                                            <select
+                                                                  aria-label={`Unidad de ${item.label}`}
+                                                                  value={item.unit}
+                                                                  onChange={(e) => setIngredient(index, { unit: e.target.value as Unit })}
+                                                                  className={`${fieldClass("card")} h-12 px-4`}
+                                                            >
+                                                                  {item.units.map((u) => (
+                                                                        <option key={u} value={u}>
+                                                                              {unitLabel(u)}
+                                                                        </option>
+                                                                  ))}
+                                                            </select>
+                                                      </div>
+                                                      <TextField label={`Preparación de ${item.label}`} hideLabel tone="card" placeholder="Preparación (opcional): en cubos…" maxLength={80} value={item.prep} onChange={(e) => setIngredient(index, { prep: e.target.value })} />
+                                                </li>
+                                          ))}
+                                    </ul>
+                                    <IngredientSearch
+                                          label="Agregar ingrediente"
+                                          placeholder="Agregar ingrediente…"
+                                          onPick={(o) => setIngredients((list) => [...list, { ingredientId: o.id, label: o.label, amount: "", unit: o.defaultUnit, units: o.allowedUnits, prep: "" }])}
+                                    />
+                              </div>
+                        )}
+                  </section>
+
+                  <section className="overflow-hidden rounded-card bg-card shadow-soft">
+                        <button
+                              type="button"
+                              aria-expanded={open.steps}
+                              onClick={() => setOpen((o) => ({ ...o, steps: !o.steps }))}
+                              className="flex min-h-16 w-full items-center gap-3 p-3 text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-strong"
+                        >
+                              <span className="grid size-11 shrink-0 place-items-center rounded-control bg-peach-soft text-peach-ink">
+                                    <Icon name="receipt" className="size-5" />
+                              </span>
+                              <span className="min-w-0 flex-1">
+                                    <span className="block font-display font-extrabold text-ink">Pasos</span>
+                                    <span className="block text-sm text-ink-muted">
+                                          {written === 0 ? "Cuenta cómo se prepara" : `${written} ${written === 1 ? "paso" : "pasos"}${timed ? ` · ${timed} con temporizador` : ""}`}
+                                    </span>
+                              </span>
+                              <Icon name="chevronRight" className={`size-5 shrink-0 text-ink-muted transition-transform ${open.steps ? "rotate-90" : ""}`} />
+                        </button>
+                        {open.steps && (
+                              <div className="flex flex-col gap-3 border-t border-line p-3">
+                                    {!stepsKnown && (
+                                          <p className="flex items-start gap-2 rounded-control bg-peach-soft p-3 text-sm font-semibold text-peach-ink">
+                                                <Icon name="info" className="size-5 shrink-0" />
+                                                El servidor todavía no devuelve los pasos guardados ({initial?.stepsCount}). Si los dejas vacíos se conservan; si escribes aquí, los reemplazas.
+                                          </p>
+                                    )}
+                                    {steps.map((step, index) => (
+                                          <div key={index} className="flex items-start gap-3 rounded-control bg-field p-3">
+                                                <span aria-hidden className="mt-2 w-6 shrink-0 font-serif text-[1.5rem] leading-none font-bold text-primary-strong">
+                                                      {index + 1}
+                                                </span>
+                                                <div className="flex min-w-0 flex-1 flex-col gap-2">
+                                                      <textarea
+                                                            aria-label={`Paso ${index + 1}`}
+                                                            rows={2}
+                                                            maxLength={1000}
+                                                            placeholder="Describe este paso"
+                                                            value={step.text}
+                                                            onChange={(e) => setStep(index, { text: e.target.value })}
+                                                            className={`${fieldClass("card")} min-h-20 resize-y px-4 py-3`}
+                                                      />
+                                                      <div className="grid grid-cols-2 gap-2">
+                                                            <TextField label={`Temporizador del paso ${index + 1}`} hideLabel tone="card" placeholder="Timer" inputMode="decimal" suffix="min" value={step.minutes} onChange={(e) => setStep(index, { minutes: e.target.value })} />
+                                                            <select aria-label={`Calor del paso ${index + 1}`} value={step.heat} onChange={(e) => setStep(index, { heat: e.target.value as Heat | "" })} className={`${fieldClass("card")} h-12 px-4`}>
+                                                                  <option value="">Sin calor</option>
+                                                                  <option value="low">Bajo</option>
+                                                                  <option value="medium">Medio</option>
+                                                                  <option value="high">Alto</option>
+                                                            </select>
+                                                      </div>
+                                                </div>
+                                                <button type="button" aria-label={`Quitar paso ${index + 1}`} disabled={steps.length === 1} onClick={() => setSteps((list) => list.filter((_, i) => i !== index))} className={removeButton}>
                                                       <Icon name="trash" className="size-5" />
                                                 </button>
                                           </div>
-                                          <div className="grid grid-cols-[1fr_auto] gap-2">
-                                                <TextField label={`Cantidad de ${item.label}`} hideLabel placeholder="Cantidad" inputMode="decimal" value={item.amount} onChange={(e) => setIngredient(index, { amount: e.target.value })} error={errors[`ingredient-${index}`]} />
-                                                <select
-                                                      aria-label={`Unidad de ${item.label}`}
-                                                      value={item.unit}
-                                                      onChange={(e) => setIngredient(index, { unit: e.target.value as Unit })}
-                                                      className={`${fieldClass("field")} h-12 px-4`}
-                                                >
-                                                      {item.units.map((u) => (
-                                                            <option key={u} value={u}>
-                                                                  {unitLabel(u)}
-                                                            </option>
-                                                      ))}
-                                                </select>
-                                          </div>
-                                          <TextField label={`Preparación de ${item.label}`} hideLabel placeholder="Preparación (opcional): en cubos…" maxLength={80} value={item.prep} onChange={(e) => setIngredient(index, { prep: e.target.value })} />
-                                    </li>
-                              ))}
-                        </ul>
-                        <div className="rounded-card bg-card p-3">
-                              <IngredientSearch
-                                    label="Agregar ingrediente"
-                                    placeholder="Agregar ingrediente…"
-                                    onPick={(o) => setIngredients((list) => [...list, { ingredientId: o.id, label: o.label, amount: "", unit: o.defaultUnit, units: o.allowedUnits, prep: "" }])}
-                              />
-                        </div>
-                  </fieldset>
-
-                  <fieldset className="flex flex-col gap-3">
-                        <legend className="mb-3 font-display text-section font-extrabold text-ink">Preparación</legend>
-                        {!stepsKnown && (
-                              <p className="flex items-start gap-2 rounded-control bg-peach-soft p-3 text-sm font-semibold text-peach-ink">
-                                    <Icon name="info" className="size-5 shrink-0" />
-                                    El servidor todavía no devuelve los pasos guardados ({initial?.stepsCount}). Si los dejas vacíos se conservan; si escribes aquí, los reemplazas.
-                              </p>
-                        )}
-                        {steps.map((step, index) => (
-                              <div key={index} className="flex items-start gap-3 rounded-card bg-card p-3">
-                                    <span aria-hidden className="mt-2 grid size-8 shrink-0 place-items-center rounded-full bg-ink font-display text-sm font-extrabold text-card">
-                                          {index + 1}
-                                    </span>
-                                    <div className="flex min-w-0 flex-1 flex-col gap-2">
-                                          <textarea
-                                                aria-label={`Paso ${index + 1}`}
-                                                rows={2}
-                                                maxLength={1000}
-                                                placeholder="Describe este paso"
-                                                value={step.text}
-                                                onChange={(e) => setStep(index, { text: e.target.value })}
-                                                className={`${fieldClass("field")} min-h-20 resize-y px-4 py-3`}
-                                          />
-                                          <div className="grid grid-cols-2 gap-2">
-                                                <TextField label={`Temporizador del paso ${index + 1}`} hideLabel placeholder="Timer" inputMode="decimal" suffix="min" value={step.minutes} onChange={(e) => setStep(index, { minutes: e.target.value })} />
-                                                <select aria-label={`Calor del paso ${index + 1}`} value={step.heat} onChange={(e) => setStep(index, { heat: e.target.value as Heat | "" })} className={`${fieldClass("field")} h-12 px-4`}>
-                                                      <option value="">Sin calor</option>
-                                                      <option value="low">Bajo</option>
-                                                      <option value="medium">Medio</option>
-                                                      <option value="high">Alto</option>
-                                                </select>
-                                          </div>
-                                    </div>
-                                    <button type="button" aria-label={`Quitar paso ${index + 1}`} disabled={steps.length === 1} onClick={() => setSteps((list) => list.filter((_, i) => i !== index))} className={removeButton}>
-                                          <Icon name="trash" className="size-5" />
-                                    </button>
+                                    ))}
+                                    {errors.steps && <p className="text-sm font-semibold text-error">{errors.steps}</p>}
+                                    <Button variant="dashed" size="lg" onClick={() => setSteps((list) => [...list, { text: "", minutes: "", heat: "" }])}>
+                                          <Icon name="plus" className="size-5" strokeWidth={2.25} />
+                                          Agregar paso
+                                    </Button>
                               </div>
-                        ))}
-                        {errors.steps && <p className="text-sm font-semibold text-error">{errors.steps}</p>}
-                        <Button variant="dashed" size="lg" onClick={() => setSteps((list) => [...list, { text: "", minutes: "", heat: "" }])}>
-                              <Icon name="plus" className="size-5" strokeWidth={2.25} />
-                              Añadir paso
-                        </Button>
-                  </fieldset>
+                        )}
+                  </section>
 
-                  <label className="flex min-h-11 items-center justify-between gap-3 rounded-card bg-card p-4 text-sm font-bold text-ink">
-                        Que otras personas le pregunten al chef por esta receta
-                        <input type="checkbox" checked={consultable ?? initial?.chefConsultable ?? false} onChange={(e) => setConsultable(e.target.checked)} className="size-6 shrink-0 accent-primary-strong" />
-                  </label>
+                  <section aria-labelledby="consultable" className="flex flex-col gap-3 rounded-card bg-plum-glow p-4 text-card shadow-[0_18px_36px_-22px_rgb(43_20_51/0.8)]">
+                        <div className="flex items-center gap-3">
+                              <MascotAvatar tone="white" className="size-12" />
+                              <div className="min-w-0 flex-1">
+                                    <h2 id="consultable" className="font-display text-title font-extrabold">
+                                          Activar Chef consultable
+                                    </h2>
+                                    <p className="text-sm text-card/80">Responderá dudas y adaptará tu receta a cada persona</p>
+                              </div>
+                              <button
+                                    type="button"
+                                    role="switch"
+                                    aria-checked={chef.enabled}
+                                    aria-labelledby="consultable"
+                                    onClick={() => setConsultable({ ...chef, enabled: !chef.enabled })}
+                                    className={`relative h-8 w-14 shrink-0 rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-card ${chef.enabled ? "bg-brand" : "bg-card/25"}`}
+                              >
+                                    <span aria-hidden className={`absolute top-1 size-6 rounded-full bg-card shadow-soft transition-[left] ${chef.enabled ? "left-7" : "left-1"}`} />
+                              </button>
+                        </div>
+                        {chef.enabled && (
+                              <div className="flex flex-wrap gap-2">
+                                    {(
+                                          [
+                                                ["useMyStyle", "Con mi estilo"],
+                                                ["suggestSubstitutes", "Sugerir sustitutos"],
+                                          ] as const
+                                    ).map(([key, label]) => (
+                                          <button key={key} type="button" aria-pressed={chef[key]} onClick={() => setConsultable({ ...chef, [key]: !chef[key] })} className={toggleChip(chef[key])}>
+                                                {chef[key] && <Icon name="check" className="size-3.5" strokeWidth={3} />}
+                                                {label}
+                                          </button>
+                                    ))}
+                              </div>
+                        )}
+                  </section>
 
                   {error && !needsEmail && <FormAlert>{[error.message, ...details].join(" ")}</FormAlert>}
                   {Object.keys(errors).length > 0 && <FormAlert>Revisa los campos marcados.</FormAlert>}
@@ -264,12 +428,9 @@ function RecipeForm({ initial }: { initial?: RecipeDetail }) {
                         </p>
                   )}
 
-                  <div className="sticky bottom-0 -mx-5 mt-2 grid grid-cols-2 gap-3 rounded-t-[2rem] bg-card px-5 pt-4 pb-6 shadow-[0_-12px_32px_-20px_rgb(43_20_51/0.35)]">
-                        <Button type="submit" variant="soft" size="lg" loading={create.isPending || update.isPending} disabled={busy}>
-                              Guardar
-                        </Button>
-                        <Button size="lg" loading={publish.isPending} disabled={busy} onClick={onPublish}>
-                              Publicar
+                  <div className="sticky bottom-0 -mx-5 mt-1 bg-canvas/95 px-5 pt-3 pb-6 backdrop-blur">
+                        <Button size="lg" fullWidth arrow="send" loading={busy} onClick={onPublish}>
+                              Publicar en la comunidad
                         </Button>
                   </div>
             </form>

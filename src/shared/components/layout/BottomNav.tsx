@@ -7,7 +7,7 @@ type Item = { to: string; label: string; icon?: IconName; end?: boolean; match?:
 // "Mi cocina" covers pantry, shopping list, week, cooked recipes and receipts; "Comunidad" is the community tab of recipes.
 const items: Item[] = [
       { to: "/", label: "Inicio", icon: "home", end: true },
-      { to: "/despensa", label: "Mi cocina", icon: "kitchen", match: (path) => ["/despensa", "/compras", "/semana", "/cocinadas", "/facturas"].some((p) => path.startsWith(p)) },
+      { to: "/cocinadas", label: "Mi cocina", icon: "kitchen", match: (path) => ["/despensa", "/compras", "/semana", "/cocinadas", "/facturas"].some((p) => path.startsWith(p)) },
       { to: "/chef", label: "Tu chef" },
       {
             to: "/recetas?ver=comunidad",

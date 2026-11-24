@@ -61,7 +61,6 @@ export const routes: RouteObject[] = [
                                           { path: "/facturas/:id", element: <ReceiptPage /> },
                                           { path: "/chef", element: <ChefPage /> },
                                           { path: "/recetas", element: <RecipesPage /> },
-                                          { path: "/recetas/:id", element: <RecipeDetailPage /> },
                                           { path: "/comunidad/:id", element: <ToRecipe /> },
                                     ],
                               },
@@ -75,6 +74,8 @@ export const routes: RouteObject[] = [
                               { path: "/plan/editar", element: <PlanPage mode="edit" /> },
                               { path: "/recetas/nueva", element: <RecipeEditorPage /> },
                               { path: "/recetas/:id/editar", element: <RecipeEditorPage /> },
+                              // Full-bleed photo and its own action bar: no bottom navigation.
+                              { path: "/recetas/:id", element: <RecipeDetailPage /> },
                               { path: "/cocinar/:id", element: <CookPage /> },
                         ],
                   },

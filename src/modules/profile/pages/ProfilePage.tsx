@@ -3,9 +3,9 @@ import { useAuth } from "@/modules/auth/hooks/useAuth";
 import { useInsights, useProfile } from "@/modules/plans/hooks/usePlan";
 import { buttonBase, buttonVariants } from "@/shared/components/ui/Button";
 import Icon from "@/shared/components/ui/Icon";
-import { MascotAvatar } from "@/shared/components/ui/MascotBubble";
 import { ErrorState } from "@/shared/components/ui/QueryState";
-import { formatNumber, plural } from "@/shared/lib/format";
+import type { IconName } from "@/shared/components/ui/Icon";
+import { formatNumber } from "@/shared/lib/format";
 import { tones, type Tone } from "@/shared/lib/tones";
 import ProfileHeader from "../components/ProfileHeader";
 import ProfileSkeleton, { InsightsSkeleton, noInsights, type InsightsShape } from "../components/ProfileSkeleton";
@@ -14,12 +14,32 @@ import type { FormStep, Insight, Profile } from "@/modules/plans/types";
 
 const focus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong";
 
-const targets: { key: keyof Profile["nutritionTargets"]; label: string; unit: string; tone: Tone }[] = [
-      { key: "kcal", label: "Calorías", unit: "kcal", tone: "peach" },
-      { key: "proteinG", label: "Proteína", unit: "g", tone: "rose" },
-      { key: "carbsG", label: "Carbohidratos", unit: "g", tone: "mustard" },
-      { key: "fatG", label: "Grasas", unit: "g", tone: "sky" },
-];
+/** One icon and tone per preference row, as in the design. */
+const sectionLook: Record<FormStep, { icon: IconName; tone: Tone }> = {
+      goals: { icon: "target", tone: "mint" },
+      activity: { icon: "walk", tone: "sky" },
+      body: { icon: "user", tone: "olive" },
+      restrictions: { icon: "alert", tone: "rose" },
+      tastes: { icon: "heart", tone: "peach" },
+      kitchen: { icon: "chef", tone: "mustard" },
+      shopping: { icon: "cart", tone: "lilac" },
+};
+
+const RING = 2 * Math.PI * 26;
+
+/** «72 %»: how much the chef knows, as a ring (the backend computes the score). */
+function LearningRing({ score }: { score: number }) {
+      const pct = Math.round(score * 100);
+      return (
+            <span role="img" aria-label={`Tu chef te conoce un ${pct} %`} className="relative grid size-16 shrink-0 place-items-center">
+                  <svg aria-hidden viewBox="0 0 64 64" className="absolute inset-0 size-full -rotate-90">
+                        <circle cx="32" cy="32" r="26" fill="none" strokeWidth="7" className="stroke-card/15" />
+                        <circle cx="32" cy="32" r="26" fill="none" strokeWidth="7" strokeLinecap="round" stroke="var(--color-mustard)" strokeDasharray={RING} strokeDashoffset={RING * (1 - score)} />
+                  </svg>
+                  <span className="relative font-display text-base font-extrabold tabular-nums">{pct}%</span>
+            </span>
+      );
+}
 
 /** The API rows plus «Sobre ti», after activity as in the form. */
 function preferenceRows(p: Profile): { section: FormStep; label: string; summary: string }[] {
@@ -53,45 +73,38 @@ export default function ProfilePage() {
                               </section>
                         ) : (
                               <>
-                                    <section aria-labelledby="learned" className="flex flex-col gap-2 rounded-card bg-card p-5">
-                                          <h2 id="learned" className="flex items-center gap-3 text-section font-extrabold text-ink">
-                                                <MascotAvatar className="size-11" />
-                                                Lo que tu chef ha aprendido
-                                          </h2>
-                                          <p className="text-sm font-semibold text-ink-muted">
-                                                {Math.round(p.learning.score * 100)}% · {plural(p.learning.signalsCount, "señal", "señales")}
-                                          </p>
+                                    <section aria-labelledby="learned" className="flex flex-col gap-4 rounded-card bg-plum-glow p-5 text-card shadow-[0_18px_36px_-22px_rgb(43_20_51/0.8)]">
+                                          <div className="flex items-center gap-4">
+                                                <LearningRing score={p.learning.score} />
+                                                <div className="min-w-0">
+                                                      <h2 id="learned" className="text-title leading-tight font-extrabold">
+                                                            Lo que tu chef ha aprendido
+                                                      </h2>
+                                                      <p className="mt-0.5 text-sm text-card/80">
+                                                            {formatNumber(p.learning.signalsCount)} {p.learning.signalsCount === 1 ? "señal" : "señales"} de lo que cocinas y compras
+                                                      </p>
+                                                </div>
+                                          </div>
                                           <Insights />
                                     </section>
 
-                                    <section aria-labelledby="targets" className="flex flex-col gap-4 rounded-card bg-card p-5">
-                                          <h2 id="targets" className="text-section font-extrabold text-ink">
-                                                Tus metas diarias
-                                          </h2>
-                                          <dl className="grid grid-cols-2 gap-3">
-                                                {targets.map(({ key, label, unit, tone }) => (
-                                                      <div key={key} className={`rounded-control p-4 ${tones[tone].soft}`}>
-                                                            <dt className={`text-xs font-extrabold ${tones[tone].ink}`}>{label}</dt>
-                                                            <dd className={`font-display text-section font-extrabold tabular-nums ${tones[tone].ink}`}>
-                                                                  {formatNumber(p.nutritionTargets[key])}
-                                                                  <span className="ml-0.5 text-sm">{unit}</span>
-                                                            </dd>
-                                                      </div>
-                                                ))}
-                                          </dl>
-                                    </section>
-
-                                    <section aria-labelledby="preferences" className="rounded-card bg-card p-5">
-                                          <h2 id="preferences" className="mb-2 text-section font-extrabold text-ink">
-                                                Tus preferencias
-                                          </h2>
-                                          <ul className="divide-y divide-line">
+                                    <section aria-labelledby="preferences">
+                                          <div className="mb-3 flex items-baseline justify-between gap-3">
+                                                <h2 id="preferences" className="text-section font-extrabold text-ink">
+                                                      Tus preferencias
+                                                </h2>
+                                                <span className="text-sm font-bold text-ink-muted">{preferenceRows(p).length} pasos</span>
+                                          </div>
+                                          <ul className="divide-y divide-line rounded-card bg-card px-4 shadow-soft">
                                                 {preferenceRows(p).map((row) => (
                                                       <li key={row.section}>
-                                                            <Link to={`/plan/editar?paso=${row.section}`} className={`flex min-h-14 items-center gap-3 py-2 ${focus}`}>
+                                                            <Link to={`/plan/editar?paso=${row.section}`} className={`flex min-h-16 items-center gap-3 py-2 ${focus}`}>
+                                                                  <span aria-hidden className={`grid size-10 shrink-0 place-items-center rounded-control ${tones[sectionLook[row.section].tone].soft} ${tones[sectionLook[row.section].tone].ink}`}>
+                                                                        <Icon name={sectionLook[row.section].icon} className="size-5" strokeWidth={2} />
+                                                                  </span>
                                                                   <span className="min-w-0 flex-1">
-                                                                        <span className="block text-xs font-extrabold text-ink-muted">{row.label}</span>
-                                                                        <span className="block truncate font-bold text-ink">{row.summary}</span>
+                                                                        <span className="block font-display font-extrabold text-ink">{row.label}</span>
+                                                                        <span className="block truncate text-sm text-ink-muted">{row.summary}</span>
                                                                   </span>
                                                                   <Icon name="chevronRight" className="size-5 shrink-0 text-ink-muted" />
                                                             </Link>
@@ -116,16 +129,13 @@ function Insights() {
       useRememberShape<InsightsShape>("insights", list.data ? { count: list.data.length } : null);
       if (list.isPending) return <InsightsSkeleton />;
       if (list.isError) return <ErrorState message={list.error.message} onRetry={() => list.refetch()} />;
-      if (list.data.length === 0) return <p className="text-ink-muted">{noInsights}</p>;
+      if (list.data.length === 0) return <p className="text-card/80">{noInsights}</p>;
       return (
             <>
-                  <ul className="divide-y divide-line">
+                  <ul className="flex flex-col gap-2">
                         {list.data.map((insight: Insight) => (
-                              <li key={insight.id} className="flex items-center gap-2 py-3">
-                                    <span className="min-w-0 flex-1">
-                                          <span className="block font-bold text-ink">{insight.text}</span>
-                                          <span className="block text-xs font-semibold text-ink-muted">{insight.evidence.label}</span>
-                                    </span>
+                              <li key={insight.id} className="flex flex-wrap items-center gap-x-2 gap-y-2 rounded-control bg-card/10 p-3">
+                                    <span className="min-w-0 flex-1 text-sm font-bold">{insight.text}</span>
                                     {(["up", "down"] as const).map((v) => (
                                           <button
                                                 key={v}
@@ -134,15 +144,23 @@ function Insights() {
                                                 aria-pressed={insight.userVote === v}
                                                 disabled={vote.isPending}
                                                 onClick={() => vote.mutate({ id: insight.id, vote: v })}
-                                                className={`grid size-11 shrink-0 place-items-center rounded-full ${focus} ${insight.userVote === v ? "bg-ink text-card" : "bg-field text-ink"}`}
+                                                className={`grid size-11 shrink-0 place-items-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-card ${
+                                                      insight.userVote === v ? "bg-primary-strong text-card" : "bg-card/15 text-card hover:bg-card/25"
+                                                }`}
                                           >
                                                 <Icon name={v === "up" ? "thumbUp" : "thumbDown"} className="size-5" />
                                           </button>
                                     ))}
+                                    <span className="flex w-full items-center gap-3">
+                                          <span aria-hidden className="h-1.5 flex-1 overflow-hidden rounded-full bg-card/15">
+                                                <span className="block h-full rounded-full bg-brand" style={{ width: `${Math.round(insight.confidence * 100)}%` }} />
+                                          </span>
+                                          <span className="shrink-0 text-xs font-semibold text-card/75">{insight.evidence.label}</span>
+                                    </span>
                               </li>
                         ))}
                   </ul>
-                  {vote.error && <p className="text-sm font-semibold text-error">{vote.error.message}</p>}
+                  {vote.error && <p className="text-sm font-semibold text-secondary-soft">{vote.error.message}</p>}
             </>
       );
 }

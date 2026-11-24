@@ -12,7 +12,7 @@ import { placeOptions } from "../utils/places";
 import IngredientSearch from "./IngredientSearch";
 
 /** Pick from the catalog, then amount and place (both optional). */
-export default function AddPantryItem() {
+export default function AddPantryItem({ initialQuery }: { initialQuery?: string }) {
       const { add } = usePantryMutations();
       const [picked, setPicked] = useState<IngredientOption | null>(null);
       const [amount, setAmount] = useState("");
@@ -53,7 +53,7 @@ export default function AddPantryItem() {
                         Añadir ingrediente
                   </h2>
                   {!picked ? (
-                        <IngredientSearch label="Buscar ingrediente para añadir" onPick={pick} />
+                        <IngredientSearch label="Buscar en el catálogo para añadir" placeholder="Busca en el catálogo: arroz, pollo…" autoFocus={Boolean(initialQuery)} initialQuery={initialQuery} onPick={pick} />
                   ) : (
                         <form noValidate onSubmit={submit} className="flex flex-col gap-3">
                               <p className="flex items-center justify-between gap-3 font-bold text-ink">

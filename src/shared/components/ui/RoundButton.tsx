@@ -10,7 +10,7 @@ const toneClass: Record<Tone, string> = {
 };
 
 export const roundButtonClass = (tone: Tone = "card", size: "md" | "lg" = "md") =>
-      `relative grid shrink-0 place-items-center rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong ${
+      `relative grid shrink-0 place-items-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong ${
             size === "lg" ? "size-14" : "size-12"
       } ${toneClass[tone]}`;
 

@@ -8,6 +8,8 @@ import DishCover from "@/shared/components/ui/DishArt";
 import Icon, { type IconName } from "@/shared/components/ui/Icon";
 import LoadMore from "@/shared/components/ui/LoadMore";
 import Mascot from "@/shared/components/ui/Mascot";
+import { MascotAvatar } from "@/shared/components/ui/MascotBubble";
+import { MarkerText } from "@/shared/components/ui/ScribbleText";
 import Photo from "@/shared/components/ui/Photo";
 import { EmptyState, ErrorState } from "@/shared/components/ui/QueryState";
 import RoundButton from "@/shared/components/ui/RoundButton";
@@ -34,23 +36,37 @@ export default function RecipesPage() {
 
       return (
             <>
-                  <PageHeader
-                        title="Recetas"
-                        scribble="orange"
-                        decoration="star"
-                        actions={
-                              <>
-                                    <RoundButton to="/compras" label="Lista de compras">
-                                          <Icon name="cart" />
-                                    </RoundButton>
-                                    <RoundButton to="/recetas/nueva" label="Nueva receta" tone="primary">
-                                          <Icon name="plus" strokeWidth={2.25} />
-                                    </RoundButton>
-                              </>
-                        }
-                  />
+                  {tab === "comunidad" ? (
+                        <header className="mx-auto flex max-w-xl items-center gap-3 px-5 pt-6 pb-2">
+                              <div className="min-w-0 flex-1">
+                                    <h1 className="text-[1.75rem] leading-tight font-extrabold text-ink">
+                                          <MarkerText>Comunidad</MarkerText>
+                                    </h1>
+                                    <p className="mt-1 text-sm font-semibold text-ink-muted">Recetas de gente real</p>
+                              </div>
+                              <RoundButton to="/recetas/nueva" label="Nueva receta" tone="primary">
+                                    <Icon name="plus" strokeWidth={2.25} />
+                              </RoundButton>
+                        </header>
+                  ) : (
+                        <PageHeader
+                              title="Recetas"
+                              scribble="orange"
+                              decoration="star"
+                              actions={
+                                    <>
+                                          <RoundButton to="/compras" label="Lista de compras">
+                                                <Icon name="cart" />
+                                          </RoundButton>
+                                          <RoundButton to="/recetas/nueva" label="Nueva receta" tone="primary">
+                                                <Icon name="plus" strokeWidth={2.25} />
+                                          </RoundButton>
+                                    </>
+                              }
+                        />
+                  )}
                   <main className="mx-auto flex max-w-xl flex-col gap-4 px-5 pt-3">
-                        <div role="tablist" aria-label="Tipo de recetas" className="grid grid-cols-3 gap-1 rounded-full bg-card p-1.5">
+                        <div role="tablist" aria-label="Tipo de recetas" className="grid grid-cols-3 gap-1 rounded-full bg-card p-1 shadow-soft">
                               {tabs.map(({ id, label }) => (
                                     <button
                                           key={id}
@@ -60,8 +76,8 @@ export default function RecipesPage() {
                                           aria-selected={tab === id}
                                           aria-controls="recipes-panel"
                                           onClick={() => setParams(id === "mias" ? {} : { ver: id }, { replace: true })}
-                                          className={`min-h-11 rounded-full text-sm font-extrabold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong ${
-                                                tab === id ? "bg-ink text-card" : "text-ink-muted hover:text-ink"
+                                          className={`min-h-10 rounded-full text-sm font-extrabold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong ${
+                                                tab === id ? "bg-brand text-card" : "text-ink-muted hover:text-ink"
                                           }`}
                                     >
                                           {label}
@@ -220,27 +236,30 @@ function Community() {
       return (
             <>
                   {creators.data && creators.data.length > 0 && (
-                        <ul aria-label="Creadores" className="scrollbar-none -mx-5 flex gap-4 overflow-x-auto px-5 py-1">
+                        <ul aria-label="Creadores que sigues" className="scrollbar-none -mx-5 flex gap-4 overflow-x-auto px-5 py-1">
                               {creators.data.map((creator) => (
-                                    <li key={creator.id} className="flex w-20 shrink-0 flex-col items-center gap-1 text-center">
-                                          <span className={`rounded-full p-1 ${creator.hasNewContent ? "bg-brand" : "bg-line"}`}>
-                                                <Avatar name={creator.firstName} url={creator.avatarUrl} size="md" className="border-2 border-card" />
-                                          </span>
-                                          <span className="w-full truncate text-xs font-bold text-ink">{creator.firstName}</span>
+                                    <li key={creator.id} className="flex w-[4.5rem] shrink-0 flex-col items-center gap-1.5 text-center">
                                           <button
                                                 type="button"
                                                 aria-pressed={creator.following}
+                                                aria-label={`${creator.firstName}${creator.hasNewContent ? ", con recetas nuevas" : ""}. ${creator.following ? "Dejar de seguir" : "Seguir"}`}
                                                 disabled={follow.isPending}
                                                 onClick={() => follow.mutate({ id: creator.id, on: !creator.following })}
-                                                className={`min-h-9 rounded-full px-3 text-xs font-extrabold focus-visible:outline-2 focus-visible:outline-primary-strong ${creator.following ? "bg-field text-ink" : "bg-primary-soft text-rose-ink"}`}
+                                                className={`relative rounded-full p-[3px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong ${creator.hasNewContent ? "bg-brand" : "bg-line"}`}
                                           >
-                                                {creator.following ? "Siguiendo" : "Seguir"}
+                                                <Avatar name={creator.firstName} url={creator.avatarUrl} size="md" className="border-[3px] border-canvas" />
+                                                {!creator.following && (
+                                                      <span aria-hidden className="absolute -right-0.5 -bottom-0.5 grid size-6 place-items-center rounded-full border-2 border-canvas bg-primary-strong text-card">
+                                                            <Icon name="plus" className="size-3.5" strokeWidth={3} />
+                                                      </span>
+                                                )}
                                           </button>
+                                          <span aria-hidden className="w-full truncate text-xs font-bold text-ink">{creator.firstName}</span>
                                     </li>
                               ))}
                         </ul>
                   )}
-                  {filters.length > 0 && <Chips bleed label="Filtrar comunidad" value={filter} onChange={setFilter} options={filters} />}
+                  {filters.length > 0 && <Chips bleed label="Filtrar comunidad" value={filter} onChange={setFilter} options={filters.map((f) => (f.id === "trending" ? { ...f, icon: "flame" as const } : f))} />}
                   {feed.isError ? (
                         <ErrorState message={feed.error.message} onRetry={() => feed.refetch()} />
                   ) : items.length === 0 ? (
@@ -270,42 +289,85 @@ function FeedCard({ item }: { item: FeedItem }) {
       const { like, save } = useRecipeActions();
       const [commentsOpen, setCommentsOpen] = useState(false);
       const { recipe, author, viewer, stats, compatibility } = item;
-      const action = "inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 text-sm font-bold text-ink hover:bg-field focus-visible:outline-2 focus-visible:outline-primary-strong";
       const error = like.error ?? save.error;
+      const n = recipe.nutritionPerServing;
+      const time = formatTime(recipe.totalTimeMinutes);
+      const glass = "inline-flex items-center gap-1.5 rounded-full bg-plum/55 px-2.5 py-1 text-xs font-extrabold text-card backdrop-blur-md";
+      const stat =
+            "inline-flex min-h-11 items-center gap-1.5 rounded-full px-2 text-sm font-extrabold text-card hover:bg-card/15 focus-visible:outline-2 focus-visible:outline-card disabled:opacity-60";
 
       return (
-            <li className="overflow-hidden rounded-card bg-card shadow-soft">
-                  <Link to={`/recetas/${recipe.id}`} className="block focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-strong">
-                        <span className="relative block h-48">
-                              <Photo url={recipe.imageUrl} width={800} height={384} className="size-full object-cover" fallback={<DishCover seed={recipe.id} className="size-full" />} />
-                              {!compatibility.ok && (
-                                    <span className={coverBadge}>{compatibility.adaptable ? "Tu chef la adapta" : `Tiene ${compatibility.conflicts.map((c) => c.label.toLowerCase()).join(", ")}`}</span>
-                              )}
+            <li className="relative isolate overflow-hidden rounded-card bg-plum text-card shadow-[0_20px_40px_-24px_rgb(43_20_51/0.8)]">
+                  <span className="absolute inset-0 -z-10">
+                        <Photo url={recipe.imageUrl} width={720} height={900} className="size-full object-cover" fallback={<DishCover seed={recipe.id} layout="hero" className="size-full" />} />
+                  </span>
+                  <span aria-hidden className="absolute inset-0 -z-10 bg-[linear-gradient(180deg,rgb(29_9_44/0.4)_0%,transparent_22%,rgb(29_9_44/0.35)_45%,rgb(29_9_44/0.94)_100%)]" />
+
+                  <div className="flex items-start justify-between gap-2 p-4">
+                        <span className="inline-flex items-center gap-2 rounded-full bg-plum/55 py-1 pr-3 pl-1 text-sm font-extrabold backdrop-blur-md">
+                              <Avatar name={author.displayName} url={author.avatarUrl} size="xs" className="size-7 text-xs" />
+                              {author.displayName}
                         </span>
-                        <span className="flex items-center gap-3 px-4 pt-3">
-                              <Avatar name={author.displayName} url={author.avatarUrl} size="sm" />
-                              <span className="min-w-0">
-                                    <span className="block truncate font-display text-title font-extrabold text-ink">{recipe.title}</span>
-                                    <span className="block truncate text-xs font-semibold text-ink-muted">
-                                          {author.displayName} · {cardMeta(recipe)}
-                                    </span>
+                        {item.chefConsultable && (
+                              <span title="Chef consultable" className="rounded-full bg-brand p-[3px]">
+                                    <MascotAvatar tone="white" className="size-10" />
+                                    <span className="sr-only">Chef consultable</span>
                               </span>
-                        </span>
+                        )}
+                  </div>
+
+                  <Link to={`/recetas/${recipe.id}`} className="block px-4 pt-28 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-card">
+                        {!compatibility.ok && (
+                              <span className={`${glass} mb-2 bg-secondary-soft/95 text-peach-ink`}>
+                                    {compatibility.adaptable ? "Tu chef la adapta" : `Tiene ${compatibility.conflicts.map((c) => c.label.toLowerCase()).join(", ")}`}
+                              </span>
+                        )}
+                        {recipe.cuisine && <span className="block text-sm font-bold text-secondary-soft">{recipe.cuisine.label}</span>}
+                        <span className="mt-0.5 block font-display text-section leading-tight font-extrabold text-balance">{recipe.title}</span>
                   </Link>
-                  <div className="flex items-center px-2 pb-2">
-                        <button type="button" aria-pressed={viewer.liked} aria-label={`Me gusta (${stats.likes})`} disabled={like.isPending} onClick={() => like.mutate({ id: recipe.id, on: !viewer.liked })} className={action}>
-                              <Icon name="heart" className={`size-5 ${viewer.liked ? "fill-current text-primary-strong" : ""}`} />
+                  <ul className="flex flex-wrap gap-1.5 px-4 pt-3">
+                        {time && (
+                              <li className={glass}>
+                                    <Icon name="clock" className="size-3.5" />
+                                    {time}
+                              </li>
+                        )}
+                        {recipe.difficulty && (
+                              <li className={glass}>
+                                    <Icon name="flame" className="size-3.5" />
+                                    {recipe.difficulty.label}
+                              </li>
+                        )}
+                        <li className={glass} aria-label={`${n.kcal} kcal, ${Math.round(n.proteinG)} g de proteína, ${Math.round(n.carbsG)} g de carbohidratos y ${Math.round(n.fatG)} g de grasa`}>
+                              <span aria-hidden className="text-secondary">{n.kcal}kcal</span>
+                              <span aria-hidden className="text-[color-mix(in_srgb,var(--color-mint-soft)_80%,white)]">{Math.round(n.proteinG)}p</span>
+                              <span aria-hidden className="text-rose-soft">{Math.round(n.carbsG)}c</span>
+                              <span aria-hidden className="text-mustard-soft">{Math.round(n.fatG)}f</span>
+                        </li>
+                  </ul>
+                  <div className="flex items-center gap-1 px-2 pt-1 pb-3">
+                        <button type="button" aria-pressed={viewer.liked} aria-label={`Me gusta (${stats.likes})`} disabled={like.isPending} onClick={() => like.mutate({ id: recipe.id, on: !viewer.liked })} className={stat}>
+                              <Icon name="heart" className={`size-5 ${viewer.liked ? "fill-current text-primary" : ""}`} />
                               {stats.likes}
                         </button>
-                        <button type="button" aria-label={`Comentarios (${stats.comments})`} onClick={() => setCommentsOpen(true)} className={action}>
-                              <Icon name="mail" className="size-5" />
+                        <button type="button" aria-label={`Comentarios (${stats.comments})`} onClick={() => setCommentsOpen(true)} className={stat}>
+                              <Icon name="chat" className="size-5" />
                               {stats.comments}
                         </button>
-                        <button type="button" aria-pressed={viewer.saved} aria-label="Guardar" disabled={save.isPending} onClick={() => save.mutate({ id: recipe.id, on: !viewer.saved })} className={`${action} ml-auto`}>
-                              <Icon name="bookmark" className={`size-5 ${viewer.saved ? "fill-current text-primary-strong" : ""}`} />
+                        <button type="button" aria-pressed={viewer.saved} aria-label="Guardar" disabled={save.isPending} onClick={() => save.mutate({ id: recipe.id, on: !viewer.saved })} className={stat}>
+                              <Icon name="bookmark" className={`size-5 ${viewer.saved ? "fill-current" : ""}`} />
                         </button>
+                        {item.chefConsultable && (
+                              <Link
+                                    to={`/chef?receta=${recipe.id}`}
+                                    className="ml-auto inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full bg-card px-3 text-xs font-extrabold whitespace-nowrap text-primary-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-card"
+                              >
+                                    <Icon name="chat" className="size-4" />
+                                    Pregúntale al chef
+                              </Link>
+                        )}
                   </div>
-                  {error && <p className="px-4 pb-3 text-sm font-semibold text-error">{error.message}</p>}
+                  {error && <p className="px-4 pb-3 text-sm font-semibold text-secondary-soft">{error.message}</p>}
                   <CommentsDialog recipeId={recipe.id} open={commentsOpen} onClose={() => setCommentsOpen(false)} />
             </li>
       );

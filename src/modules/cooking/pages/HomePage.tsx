@@ -111,17 +111,17 @@ export default function HomePage() {
                                                 <MealsRow meals={data.day.meals} onPick={setSlot} />
                                           </>
                                     )}
-                                    {data.nudge && (
-                                          <div className="px-5">
-                                                <NudgeCard nudge={data.nudge} />
-                                          </div>
-                                    )}
                                     {data.ideas && data.ideas.items.length > 0 && (
                                           <section aria-labelledby="for-you" className="flex flex-col gap-3">
-                                                <SectionTitle id="for-you" title="Hoy para ti" action={{ to: "/recetas?ver=explorar", label: "Más ideas" }} />
+                                                <SectionTitle id="for-you" title="Hoy para ti" action={{ to: "/recetas?ver=explorar", label: plural(data.ideas.items.length, "idea", "ideas") }} />
                                                 <TodayCarousel recipes={data.ideas.items} />
                                           </section>
                                     )}
+                                    {data.nudge ? (
+                                          <div className="px-5">
+                                                <NudgeCard nudge={data.nudge} />
+                                          </div>
+                                    ) : (
                                     <Link
                                           to="/chef"
                                           className="mx-5 flex items-center gap-3 rounded-full bg-card p-2 pr-4 shadow-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong"
@@ -132,6 +132,7 @@ export default function HomePage() {
                                           </span>
                                           <Icon name="arrowRight" className="size-5 text-primary-strong" />
                                     </Link>
+                                    )}
                                     {data.mostCooked && (
                                           <section aria-labelledby="most-cooked" className="flex flex-col gap-3">
                                                 <SectionTitle id="most-cooked" title="Lo que más cocinas" action={{ to: "/cocinadas", label: "Ver todo" }} />

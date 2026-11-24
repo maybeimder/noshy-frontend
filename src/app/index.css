@@ -59,6 +59,8 @@
       --font-sans: "Nunito", ui-sans-serif, system-ui, sans-serif;
       --font-display: "Outfit", "Nunito", ui-sans-serif, sans-serif;
       --font-logo: "Outfit", "Nunito", ui-sans-serif, sans-serif;
+      /* Cooking mode: step titles read like a cookbook (refactor nov 2026). */
+      --font-serif: "Fraunces", ui-serif, Georgia, serif;
 
       --text-page: 2rem; /* 32 / 40 */
       --text-page--line-height: 2.5rem;

@@ -23,7 +23,7 @@ export default function TodayCarousel({ recipes }: { recipes: RecipeCard[] }) {
                   <ul ref={track} onScroll={onScroll} className="scrollbar-none flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth px-5 pb-2">
                         {recipes.map((recipe) => {
                               const { have, total } = recipe.pantryMatch;
-                              const tags = [recipe.cuisine?.label, ...recipe.tags].filter(Boolean).slice(0, 3);
+                              const tags = recipe.tags.slice(0, 4);
                               const time = formatTime(recipe.totalTimeMinutes);
                               return (
                                     <li key={recipe.id} className="w-[86%] max-w-sm shrink-0 snap-center">
@@ -54,7 +54,7 @@ export default function TodayCarousel({ recipes }: { recipes: RecipeCard[] }) {
 
                                                 <div className="relative mt-auto flex items-end gap-3 p-5">
                                                       <div className="min-w-0 flex-1">
-                                                            <p className="text-sm font-bold text-secondary-soft">{recipe.reason?.label ?? "Para ti"}</p>
+                                                            <p className="text-sm font-bold text-secondary-soft">{recipe.cuisine?.label ?? recipe.reason?.label ?? "Para ti"}</p>
                                                             <h3 className="mt-0.5 text-section leading-tight font-extrabold text-balance">{recipe.title}</h3>
                                                             {tags.length > 0 && <p className="mt-1 truncate text-sm text-card/80">{tags.join(" · ")}</p>}
                                                             <p className="mt-2 flex items-center gap-1.5 text-sm font-bold">

@@ -9,6 +9,7 @@ import Chips from "@/shared/components/ui/Chips";
 import Dialog from "@/shared/components/ui/Dialog";
 import FormAlert from "@/shared/components/ui/FormAlert";
 import Icon from "@/shared/components/ui/Icon";
+import IngredientIcon from "@/shared/components/ui/IngredientIcon";
 import Mascot from "@/shared/components/ui/Mascot";
 import { ErrorState } from "@/shared/components/ui/QueryState";
 import RoundButton from "@/shared/components/ui/RoundButton";
@@ -131,40 +132,63 @@ export default function ShoppingListPage() {
                         {addOpen && add}
                         {nudge.data && <NudgeCard nudge={nudge.data} />}
 
-                        <section aria-label="Resumen" className="rounded-card bg-peach-glow p-5 text-ink shadow-soft">
+                        {storeMode && (
+                              <div className="flex items-center gap-3 rounded-card bg-plum-glow p-3 pl-4 text-card shadow-soft">
+                                    <Icon name="store" className="size-6 shrink-0 text-secondary" />
+                                    <p className="min-w-0 flex-1 text-sm">
+                                          <strong className="block font-display text-base">Modo tienda · {data.store.name}</strong>
+                                          Por pasillos, con el precio real a mano.
+                                    </p>
+                                    <button
+                                          type="button"
+                                          onClick={() => setStoreMode(false)}
+                                          className="min-h-11 shrink-0 rounded-full bg-card/15 px-4 text-sm font-extrabold hover:bg-card/25 focus-visible:outline-2 focus-visible:outline-card"
+                                    >
+                                          Salir
+                                    </button>
+                              </div>
+                        )}
+
+                        <section aria-label="Resumen" className="rounded-card bg-[linear-gradient(110deg,var(--color-secondary)_0%,var(--color-salmon)_60%,var(--color-primary)_100%)] p-5 text-ink shadow-soft">
                               <div className="flex items-start justify-between gap-3">
                                     <div className="min-w-0">
-                                          <p className="text-xs font-extrabold tracking-wider uppercase">Llevas en {data.store.name}</p>
-                                          <p className="mt-1 flex flex-wrap items-baseline gap-x-2">
-                                                <span className="font-display text-metric font-extrabold tabular-nums">{formatMoney(data.totals.spent)}</span>
-                                                <span className="text-sm font-bold">de {formatMoney(data.totals.estimated)}</span>
+                                          <p className="text-xs font-extrabold tracking-wider uppercase">Gastado hasta ahora</p>
+                                          <p className="mt-1 font-display text-metric font-extrabold tabular-nums">{formatMoney(data.totals.spent)}</p>
+                                          <p className="text-sm font-bold">
+                                                de {formatMoney(data.totals.estimated)} estimado · {data.store.name}
                                           </p>
                                     </div>
                                     {data.totals.savings.amount > 0 && (
-                                          <span className="shrink-0 rounded-full bg-card px-3 py-1.5 text-xs font-extrabold tabular-nums">Ahorras {formatMoney(data.totals.savings)}</span>
+                                          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-card/90 px-3 py-1.5 text-xs font-extrabold text-rose-ink tabular-nums">
+                                                <Icon name="tag" className="size-3.5" strokeWidth={2.25} />
+                                                Ahorras {formatMoney(data.totals.savings)}
+                                          </span>
                                     )}
                               </div>
-                              <div role="progressbar" aria-label="Compras hechas" aria-valuemin={0} aria-valuemax={total} aria-valuenow={inCart} className="mt-3 h-2.5 overflow-hidden rounded-full bg-card/70">
-                                    <div className="h-full rounded-full bg-brand transition-[width] duration-500 ease-out" style={{ width: `${total ? (inCart / total) * 100 : 0}%` }} />
+                              <div className="mt-4 flex items-center gap-3">
+                                    <div role="progressbar" aria-label="Compras hechas" aria-valuemin={0} aria-valuemax={total} aria-valuenow={inCart} className="h-2.5 flex-1 overflow-hidden rounded-full bg-card/60">
+                                          <div className="h-full rounded-full bg-plum transition-[width] duration-500 ease-out" style={{ width: `${total ? (inCart / total) * 100 : 0}%` }} />
+                                    </div>
+                                    <p className="shrink-0 text-sm font-extrabold tabular-nums">
+                                          {inCart}/{total} en el carrito
+                                    </p>
                               </div>
-                              <p className="mt-2 text-sm font-semibold">
-                                    {inCart} de {total} en el carrito
-                              </p>
-                              {data.recipes.length > 0 && <p className="mt-1 truncate text-sm font-semibold">Para {data.recipes.map((r) => r.title).join(", ")}</p>}
+                              {data.recipes.length > 0 && <p className="mt-2 truncate text-sm font-semibold">Para {data.recipes.map((r) => r.title).join(", ")}</p>}
                         </section>
 
-                        <label className="flex min-h-11 items-center justify-between gap-3 rounded-card bg-card px-4 py-2 text-sm font-bold text-ink shadow-soft">
-                              Modo tienda: por pasillos y con precio real
-                              <input type="checkbox" checked={storeMode} onChange={(e) => setStoreMode(e.target.checked)} className="size-6 accent-primary-strong" />
-                        </label>
-
                         {!storeMode && data.filters.length > 2 && (
-                              <Chips bleed label="Filtrar" value={filter} onChange={setFilter} options={data.filters.map((f) => ({ id: f.id, label: f.count === undefined ? f.label : `${f.label} · ${f.count}` }))} />
+                              <Chips
+                                    bleed
+                                    label="Filtrar"
+                                    value={filter}
+                                    onChange={setFilter}
+                                    options={data.filters.map((f) => ({ id: f.id, label: f.count === undefined ? f.label : `${f.label} ${f.count}`, icon: f.id === "fridge" ? ("pantry" as const) : f.id === "all" ? undefined : ("sprout" as const) }))}
+                              />
                         )}
 
                         {groups.map((group) => (
                               <section key={group.id} aria-labelledby={group.id} className="flex flex-col gap-2">
-                                    <h2 id={group.id} className="text-title font-extrabold text-ink">
+                                    <h2 id={group.id} className={data.groups.length > 1 || storeMode ? "font-sans text-xs font-extrabold tracking-wider text-ink-muted uppercase" : "sr-only"}>
                                           {group.label}
                                     </h2>
                                     <ul className="flex flex-col gap-2">
@@ -177,7 +201,17 @@ export default function ShoppingListPage() {
                         ))}
                         {total === 0 && <p className="py-6 text-center text-ink-muted">Tu lista está vacía.</p>}
 
-                        {inCart > 0 && <Checkout list={data} onDone={setDone} />}
+                        {storeMode ? (
+                              inCart > 0 && <Checkout list={data} onDone={setDone} />
+                        ) : (
+                              total > 0 && (
+                                    <div className="fixed inset-x-4 bottom-24 z-10 mx-auto max-w-xl">
+                                          <Button size="lg" fullWidth arrow="store" onClick={() => setStoreMode(true)}>
+                                                Activar modo tienda
+                                          </Button>
+                                    </div>
+                              )
+                        )}
                   </main>
             </>
       );
@@ -205,10 +239,12 @@ function ItemRow({ listId, item, storeMode }: { listId: string; item: ShoppingIt
       const checked = ticked ?? item.checked;
       const error = patch.error ?? swap.error;
 
+      const price$ = item.price.actual ?? item.price.estimated;
+
       return (
-            <li className="flex flex-col gap-2 rounded-card bg-card p-3 shadow-soft">
+            <li className={`flex flex-col gap-2 rounded-card p-3 shadow-soft transition-colors ${checked ? "bg-card/70" : "bg-card"}`}>
                   <div className="flex items-center gap-3">
-                        <label className="flex min-h-11 min-w-0 flex-1 cursor-pointer items-center gap-3">
+                        <label className={`flex min-w-0 flex-1 cursor-pointer items-center gap-3 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-primary-strong ${storeMode ? "min-h-14" : "min-h-11"}`}>
                               <input
                                     type="checkbox"
                                     checked={checked}
@@ -217,26 +253,36 @@ function ItemRow({ listId, item, storeMode }: { listId: string; item: ShoppingIt
                                           setTicked(e.target.checked);
                                           patch.mutate({ listId, itemId: item.id, patch: { checked: e.target.checked } }, { onSettled: () => setTicked(null) });
                                     }}
-                                    className={`shrink-0 accent-primary-strong ${storeMode ? "size-8" : "size-6"}`}
+                                    className="sr-only"
                               />
+                              <span aria-hidden className={`grid shrink-0 place-items-center rounded-full transition-colors ${storeMode ? "size-8" : "size-7"} ${checked ? "bg-primary-strong text-card" : "border-2 border-line bg-card"}`}>
+                                    {checked && <Icon name="check" className="size-4" strokeWidth={3} />}
+                              </span>
+                              <IngredientIcon label={item.label} icon={item.icon} />
                               <span className="min-w-0 flex-1">
-                                    <span className={`block truncate font-bold ${checked ? "text-ink-muted line-through" : "text-ink"}`}>{item.label}</span>
-                                    <span className="block truncate text-sm font-semibold text-ink-muted">{[item.quantity.display, item.product?.brand].filter(Boolean).join(" · ")}</span>
+                                    <span className={`block truncate font-display font-extrabold ${checked ? "text-ink-muted line-through" : "text-ink"}`}>{item.label}</span>
+                                    {item.product?.brand && <span className="block truncate text-xs font-semibold text-ink-muted">{item.product.brand}</span>}
                               </span>
                         </label>
-                        <button
-                              type="button"
-                              aria-expanded={priceOpen}
-                              aria-label={`Precio de ${item.label}: ${formatMoney(item.price.actual ?? item.price.estimated)}. Cambiar`}
-                              onClick={() => {
-                                    setPrice(String((item.price.actual ?? item.price.estimated).amount));
-                                    setPriceOpen((v) => !v);
-                              }}
-                              className="min-h-11 shrink-0 rounded-full px-3 text-sm font-extrabold text-ink tabular-nums hover:bg-field focus-visible:outline-2 focus-visible:outline-primary-strong"
-                        >
-                              {!item.price.actual && "≈ "}
-                              {formatMoney(item.price.actual ?? item.price.estimated)}
-                        </button>
+                        <div className="flex shrink-0 flex-col items-end gap-1">
+                              <span className={`rounded-full border-2 px-2.5 py-0.5 text-sm font-extrabold tabular-nums ${checked ? "border-primary text-ink" : "border-transparent bg-field text-ink-muted"}`}>
+                                    {item.quantity.display}
+                              </span>
+                              <button
+                                    type="button"
+                                    aria-expanded={priceOpen}
+                                    aria-label={`Precio de ${item.label}: ${formatMoney(price$)}. Cambiar`}
+                                    onClick={() => {
+                                          setPrice(String(price$.amount));
+                                          setPriceOpen((v) => !v);
+                                    }}
+                                    className="inline-flex min-h-8 items-center gap-1 rounded-full px-1.5 text-xs font-extrabold text-ink-muted tabular-nums hover:bg-field hover:text-ink focus-visible:outline-2 focus-visible:outline-primary-strong"
+                              >
+                                    {!item.price.actual && "≈ "}
+                                    {formatMoney(price$)}
+                                    <Icon name="edit" className="size-3.5" />
+                              </button>
+                        </div>
                   </div>
 
                   {priceOpen && (
@@ -256,16 +302,23 @@ function ItemRow({ listId, item, storeMode }: { listId: string; item: ShoppingIt
                   )}
 
                   {item.suggestion && (
-                        <div className="flex items-center gap-3 rounded-control bg-mint-soft p-3">
-                              <p className="min-w-0 flex-1 text-sm text-mint-ink">
-                                    <strong className="block">
+                        <div className="ml-10 flex items-center gap-3 rounded-control border-2 border-dashed border-primary/30 bg-primary-soft/60 p-3">
+                              <Icon name="sparkle" className="size-4 shrink-0 text-primary-strong" strokeWidth={2.25} />
+                              <p className="min-w-0 flex-1 text-sm text-ink">
+                                    <strong className="block font-display">
                                           {item.suggestion.product.label} · {formatMoney(item.suggestion.price)}
                                     </strong>
-                                    {item.suggestion.reason}
+                                    <span className="text-ink-muted">{item.suggestion.reason}</span>
                               </p>
-                              <Button variant="secondary" loading={swap.isPending} onClick={() => swap.mutate({ listId, itemId: item.id, suggestionId: item.suggestion!.id })}>
-                                    Cambiar
-                              </Button>
+                              <button
+                                    type="button"
+                                    aria-label={`Cambiar por ${item.suggestion.product.label}`}
+                                    disabled={swap.isPending}
+                                    onClick={() => swap.mutate({ listId, itemId: item.id, suggestionId: item.suggestion!.id })}
+                                    className="grid size-11 shrink-0 place-items-center rounded-full bg-card text-primary-strong shadow-soft focus-visible:outline-2 focus-visible:outline-primary-strong disabled:opacity-60"
+                              >
+                                    <Icon name="refresh" className="size-5" strokeWidth={2.25} />
+                              </button>
                         </div>
                   )}
                   {error && <p className="text-sm font-semibold text-error">{error.message}</p>}

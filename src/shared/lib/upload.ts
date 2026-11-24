@@ -22,6 +22,14 @@ export async function uploadImage(
       const ticket = await api
             .post<{ data: UploadTicket }>("/media/uploads", { purpose, contentType: blob.type, sizeBytes: blob.size })
             .then(unwrap);
+      // A server that signs for localhost while the API lives elsewhere is misconfigured (PUBLIC_BASE_URL):
+      // the upload could only ever reach the user's own machine, so say so instead of blaming their network.
+      const apiHost = new URL(api.defaults.baseURL ?? "/", window.location.origin).hostname;
+      const uploadHost = new URL(ticket.uploadUrl, window.location.origin).hostname;
+      const local = (host: string) => host === "localhost" || host === "127.0.0.1" || host === "[::1]";
+      if (local(uploadHost) && !local(apiHost)) {
+            throw new ApiError(0, "UPLOAD_MISCONFIGURED", "El servidor todavía no puede recibir fotos. Ya lo reportamos; inténtalo más tarde.");
+      }
       try {
             await axios.put(ticket.uploadUrl, blob, {
                   headers: ticket.headers,

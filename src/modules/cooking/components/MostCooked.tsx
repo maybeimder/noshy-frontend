@@ -12,11 +12,13 @@ const itemClass =
 export default function MostCooked({ recipes }: { recipes: NonNullable<Home["mostCooked"]> }) {
       return (
             <ul className="scrollbar-none flex gap-3 overflow-x-auto px-5 py-1">
-                  {recipes.map((recipe) => (
+                  {recipes.map((recipe, index) => (
                         <li key={recipe.recipeId} className="shrink-0">
                               <Link to={`/recetas/${recipe.recipeId}`} className={itemClass}>
-                                    <span className="grid size-[4.75rem] place-items-center overflow-hidden rounded-full bg-card p-1 shadow-soft">
+                                    <span className={`grid size-[4.75rem] place-items-center rounded-full p-[3px] shadow-soft ${index % 2 ? "bg-[linear-gradient(135deg,var(--color-secondary),var(--color-mustard))]" : "bg-brand"}`}>
+                                          <span className="block size-full overflow-hidden rounded-full border-[3px] border-card bg-card">
                                           <Photo url={recipe.imageUrl} width={160} height={160} className="size-full rounded-full object-cover" fallback={<DishPlate seed={recipe.recipeId} className="size-full" />} />
+                                          </span>
                                     </span>
                                     <span className="w-full truncate text-center">{recipe.title}</span>
                                     <span className="-mt-1.5 font-semibold text-ink-muted">{plural(recipe.timesCooked, "vez", "veces")}</span>

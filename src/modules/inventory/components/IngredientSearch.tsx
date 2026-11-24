@@ -4,12 +4,12 @@ import { fieldClass } from "@/shared/components/ui/TextField";
 import { useIngredientSearch } from "../hooks/useInventory";
 import type { IngredientOption } from "../types";
 
-type IngredientSearchProps = { label: string; placeholder?: string; autoFocus?: boolean; onPick: (option: IngredientOption) => void };
+type IngredientSearchProps = { label: string; placeholder?: string; autoFocus?: boolean; initialQuery?: string; onPick: (option: IngredientOption) => void };
 
 /** Search in the ingredient catalog; everything the API stores refers to one of these. */
-export default function IngredientSearch({ label, placeholder = "Busca un ingrediente…", autoFocus, onPick }: IngredientSearchProps) {
+export default function IngredientSearch({ label, placeholder = "Busca un ingrediente…", autoFocus, initialQuery = "", onPick }: IngredientSearchProps) {
       const id = useId();
-      const [query, setQuery] = useState("");
+      const [query, setQuery] = useState(initialQuery);
       const search = useIngredientSearch(query);
       const typed = query.trim().length >= 2;
 
@@ -33,6 +33,12 @@ export default function IngredientSearch({ label, placeholder = "Busca un ingred
                               className={`${fieldClass("field")} min-h-12 rounded-full pr-4 pl-12`}
                         />
                   </div>
+                  {query.trim().length === 1 && <p className="text-xs font-semibold text-ink-muted">Escribe al menos 2 letras.</p>}
+                  {typed && search.isPending && (
+                        <p role="status" className="text-sm font-semibold text-ink-muted">
+                              Buscando en el catálogo…
+                        </p>
+                  )}
                   {typed && search.error && <p className="text-sm font-semibold text-error">{search.error.message}</p>}
                   {typed && search.data && (
                         <ul aria-label="Resultados" className="flex flex-col divide-y divide-line">
@@ -59,7 +65,7 @@ export default function IngredientSearch({ label, placeholder = "Busca un ingred
                                           </button>
                                     </li>
                               ))}
-                              {search.data.length === 0 && <li className="py-3 text-sm text-ink-muted">No encontramos «{query.trim()}» en el catálogo.</li>}
+                              {search.data.length === 0 && <li className="py-3 text-sm text-ink-muted">«{query.trim()}» todavía no está en el catálogo de Noshy. Prueba con otro nombre (por ejemplo «avena» o «granola»).</li>}
                         </ul>
                   )}
             </div>

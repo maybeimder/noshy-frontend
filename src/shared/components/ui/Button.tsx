@@ -1,5 +1,5 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
-import Icon from "./Icon";
+import Icon, { type IconName } from "./Icon";
 
 export type ButtonVariant = "primary" | "dark" | "secondary" | "soft" | "blush" | "dashed" | "tertiary";
 
@@ -8,8 +8,8 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
       size?: "md" | "lg";
       loading?: boolean;
       fullWidth?: boolean;
-      /** Label on the left, arrow in a round badge on the right (the refactor's main CTA). */
-      arrow?: boolean;
+      /** Label on the left, arrow (or another icon) in a round badge on the right (the refactor's main CTA). */
+      arrow?: boolean | IconName;
 };
 
 // Pink gradient pill with a white label on its deep end (4.8:1), ink, white card, beige, blush, dashed "add", text link.
@@ -32,7 +32,7 @@ export const buttonBase = `${buttonCore} justify-center`;
 const sizes = { md: "min-h-11 py-2 text-sm", lg: "min-h-14 px-5 py-3 text-base" };
 
 /** The translucent round arrow at the end of primary CTAs. */
-export function ArrowBadge({ icon = "arrowRight" }: { icon?: "arrowRight" | "check" }) {
+export function ArrowBadge({ icon = "arrowRight" }: { icon?: IconName }) {
       return (
             <span aria-hidden className="-mr-2 grid size-10 shrink-0 place-items-center rounded-full bg-card/25 text-card">
                   <Icon name={icon} className="size-5" strokeWidth={2.25} />
@@ -58,7 +58,7 @@ export default function Button({
                         {loading && <Spinner />}
                         {children}
                   </span>
-                  {!loading && <ArrowBadge />}
+                  {!loading && <ArrowBadge icon={arrow === true ? "arrowRight" : arrow} />}
             </>
       ) : (
             <>

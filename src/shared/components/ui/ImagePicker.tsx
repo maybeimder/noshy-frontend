@@ -13,8 +13,10 @@ type ImagePickerProps = {
       onChange: (media: UploadedMedia | null) => void;
       /** False hides «Quitar», for photos the API cannot remove. */
       removable?: boolean;
-      /** "cover": peach photo card (ref/Nueva receta.png) · "circle": avatar. */
-      shape?: "cover" | "circle";
+      /** "cover": peach photo card · "circle": avatar · "hero": photo with `children` laid over its foot (Nueva receta). */
+      shape?: "cover" | "circle" | "hero";
+      /** Hero only: content over the photo (the recipe name). */
+      children?: ReactNode;
       /** Circle only: shown when there is no photo (e.g. the initial). */
       placeholder?: ReactNode;
       hint?: string;
@@ -23,7 +25,7 @@ type ImagePickerProps = {
 const pillButton =
       "inline-flex min-h-10 cursor-pointer items-center gap-1.5 rounded-full bg-card px-4 text-sm font-extrabold text-ink shadow-[0_6px_16px_-10px_rgb(43_20_51/0.45)] hover:bg-field focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-primary-strong";
 
-export default function ImagePicker({ label, purpose, value, onChange, removable = true, shape = "cover", placeholder, hint }: ImagePickerProps) {
+export default function ImagePicker({ label, purpose, value, onChange, removable = true, shape = "cover", placeholder, hint, children }: ImagePickerProps) {
       const inputId = useId();
       const inputRef = useRef<HTMLInputElement>(null);
       const [preview, setPreview] = useState<string | null>(null);
@@ -84,6 +86,31 @@ export default function ImagePicker({ label, purpose, value, onChange, removable
                   {error}
             </p>
       );
+
+      if (shape === "hero") {
+            return (
+                  <div className="flex flex-col gap-2">
+                        <div className={`relative isolate flex min-h-64 flex-col justify-end overflow-hidden rounded-card text-card shadow-[0_20px_40px_-24px_rgb(43_20_51/0.8)] ${shown ? "bg-plum" : "bg-plum-glow"}`}>
+                              {shown && <img src={shown} alt={`${label}: vista previa`} className={`absolute inset-0 -z-10 size-full object-cover ${uploading ? "opacity-60" : ""}`} />}
+                              <span aria-hidden className="absolute inset-0 -z-10 bg-[linear-gradient(180deg,rgb(29_9_44/0.35)_0%,transparent_30%,rgb(29_9_44/0.85)_100%)]" />
+                              <label
+                                    htmlFor={inputId}
+                                    className={`absolute top-4 right-4 inline-flex min-h-10 cursor-pointer items-center gap-1.5 rounded-full bg-plum/55 px-4 text-sm font-extrabold backdrop-blur-md hover:bg-plum/70 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-card ${uploading ? "pointer-events-none opacity-60" : ""}`}
+                              >
+                                    <Icon name="camera" className="size-4" />
+                                    {uploading ? "Subiendo…" : shown ? "Cambiar" : "Añadir foto"}
+                                    <span className="sr-only"> ({label})</span>
+                                    {fileInput}
+                              </label>
+                              <div className="flex flex-col gap-2 p-5 pt-20">
+                                    {progressBar}
+                                    {children}
+                              </div>
+                        </div>
+                        {errorText}
+                  </div>
+            );
+      }
 
       if (circle) {
             return (

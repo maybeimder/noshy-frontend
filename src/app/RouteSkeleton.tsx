@@ -70,7 +70,7 @@ export default function RouteSkeleton() {
       if (pathname.startsWith("/cocinadas"))
             return (
                   <>
-                        <KitchenHeader title="Cocinadas" />
+                        <KitchenHeader title="Mi cocina" />
                         <CookedSkeleton />
                   </>
             );
