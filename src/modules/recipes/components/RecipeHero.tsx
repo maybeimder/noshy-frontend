@@ -5,7 +5,7 @@ import Icon from "@/shared/components/ui/Icon";
 import Photo from "@/shared/components/ui/Photo";
 
 type RecipeHeroProps = {
-      recipe: { id: string; title: string; imageUrl: string | null };
+      recipe: { id: string; title: string; imageUrl: string | null; imageIsReference?: boolean };
       backTo: string;
       /** Top-right controls (share, like, edit…). */
       action?: ReactNode;
@@ -45,6 +45,9 @@ export default function RecipeHero({ recipe, backTo, action, children }: RecipeH
                         </button>
                   </div>
                   {action && <div className="absolute top-5 right-5 z-10">{action}</div>}
+                  {recipe.imageIsReference && (
+                        <span className="pointer-events-none absolute top-20 right-5 z-10 rounded-full bg-plum/60 px-2.5 py-1 text-xs font-extrabold text-card backdrop-blur-md">Foto de referencia</span>
+                  )}
                   {/* Below the buttons: the title block spans the whole photo and would swallow their taps. */}
                   {children && <div className="relative flex min-h-[28rem] flex-col justify-end px-5 pt-24 pb-14 text-card">{children}</div>}
             </div>

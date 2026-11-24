@@ -32,6 +32,8 @@ export type RecipeCard = {
       isSaved: boolean;
       /** Library recipe (in English): its macros are estimated, not added up from the catalog. */
       nutritionEstimated?: boolean;
+      /** The photo shows a similar dish, not this recipe. */
+      imageIsReference?: boolean;
       reason?: { kind: "pantry" | "forYou" | "expiring"; label: string };
 };
 
