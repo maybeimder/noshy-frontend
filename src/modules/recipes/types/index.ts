@@ -73,3 +73,6 @@ export type FeedItem = {
 export type Creator = { id: string; firstName: string; avatarUrl: string | null; hasNewContent: boolean; following: boolean };
 export type Comment = { id: string; author: Author; text: string; createdAt: string };
 export type CookedRecipe = { recipe: { id: string; title: string; imageUrl: string | null }; timesCooked: number; lastCookedAt: string };
+
+/** Only on Explore: how much of the library this user can see and whether the backend is bringing more. */
+export type LibraryMeta = { total?: number; library?: { count: number; status: "ready" | "filling" | "paused" } };

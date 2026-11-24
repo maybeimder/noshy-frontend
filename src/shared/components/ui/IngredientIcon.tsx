@@ -29,6 +29,13 @@ const slugAliases: Record<string, Glyph> = {
       spice: "spice", salt: "spice", meat: "meat", beef: "meat", pork: "meat",
 };
 
+// Slugs with no glyph of their own: the closest one, only when the name says nothing better.
+const closest: Record<string, Glyph> = {
+      bottle: "milk", cup: "milk", glass: "milk", drop: "oil", honey: "oil", jar: "spice", can: "spice", pepper: "spice", drumstick: "chicken", shrimp: "fish",
+      citrus: "fruit", banana: "fruit", pineapple: "fruit", avocado: "fruit", carrot: "leaf", cucumber: "leaf", sprout: "leaf", potato: "garlic",
+      flour: "grain", legume: "grain", cereal: "grain", cookie: "bread", butter: "cheese", tofu: "cheese",
+};
+
 const words: [Glyph, RegExp][] = [
       ["cheese", /queso|pecorino|parmesano|mozzarella/],
       ["pasta", /pasta|rigatoni|espagueti|fideo|macarr/],
@@ -50,7 +57,7 @@ const words: [Glyph, RegExp][] = [
 function glyphFor(icon: string | null | undefined, label: string): Glyph | null {
       if (icon && slugAliases[icon]) return slugAliases[icon]!;
       const name = label.toLowerCase();
-      return words.find(([, re]) => re.test(name))?.[0] ?? null;
+      return words.find(([, re]) => re.test(name))?.[0] ?? (icon ? closest[icon] : undefined) ?? null;
 }
 
 type IngredientIconProps = {

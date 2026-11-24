@@ -172,10 +172,12 @@ function Mine() {
 
 const slots: MealSlotId[] = ["breakfast", "snack1", "lunch", "snack2", "dinner"];
 
+const sources = ["forYou", "library", "pantry"] as const;
+
 /** Ideas of the chef; the filters come in the URL from nudges and the pantry. */
 function Explore() {
       const [params, setParams] = useSearchParams();
-      const source = params.get("fuente") === "pantry" ? "pantry" : "forYou";
+      const source = sources.find((s) => s === params.get("fuente")) ?? "forYou";
       const slot = slots.find((s) => s === params.get("franja"));
       const using = params.get("con")?.split(",").filter(Boolean);
       const max = Number(params.get("max")) || undefined;
@@ -187,6 +189,8 @@ function Explore() {
             setParams(next, { replace: true });
       };
       const list = (ideas.data?.pages ?? []).flatMap((p) => p.data);
+      const meta = ideas.data?.pages[0]?.meta;
+      const filling = meta?.library?.status === "filling";
       useRememberShape<ListShape>("explore", ideas.data ? { count: Math.min(8, list.length) } : null);
 
       return (
@@ -208,9 +212,10 @@ function Explore() {
                         bleed
                         label="De dónde salen las ideas"
                         value={source}
-                        onChange={(id) => set({ fuente: id === "pantry" ? "pantry" : null })}
+                        onChange={(id) => set({ fuente: id === "forYou" ? null : id })}
                         options={[
                               { id: "forYou", label: "Para ti" },
+                              { id: "library", label: "Recetario" },
                               { id: "pantry", label: "Con mi despensa" },
                         ]}
                   />
@@ -239,13 +244,20 @@ function Explore() {
                         <GridSkeleton name="explore" />
                   ) : ideas.isError ? (
                         <ErrorState message={ideas.error.message} onRetry={() => ideas.refetch()} />
+                  ) : list.length === 0 && source === "library" ? (
+                        <EmptyState
+                              icon="search"
+                              title={filling ? "Preparando tu recetario" : "Tu recetario está vacío por ahora"}
+                              description={filling ? "Estamos buscando recetas que puedas comer. Aparecen aquí solas." : max ? "Prueba con más tiempo." : "No pudimos traer recetas en este momento. Vuelve en un rato o pídele una a tu chef."}
+                        />
                   ) : list.length === 0 ? (
                         <EmptyState icon="search" title="Sin ideas con estos filtros" description="Prueba con más tiempo o con otra fuente." />
                   ) : (
                         <>
                               <p className="text-sm font-semibold text-ink-muted">
-                                    {list.length} {list.length === 1 ? "receta" : "recetas"}
-                                    {source === "pantry" ? " con lo que tienes" : " para ti"}
+                                    {meta?.total ?? list.length} {(meta?.total ?? list.length) === 1 ? "receta" : "recetas"}
+                                    {source === "pantry" ? " con lo que tienes" : source === "library" ? " del recetario" : " para ti"}
+                                    {filling && <span role="status"> · trayendo más…</span>}
                               </p>
                               <ul className="grid grid-cols-2 gap-3">
                                     {list.map((recipe, index) => (

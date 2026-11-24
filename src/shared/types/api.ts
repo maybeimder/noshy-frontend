@@ -11,7 +11,7 @@ export type Facet = { id: string; label: string; count?: number };
 export type MealSlotId = "breakfast" | "snack1" | "lunch" | "snack2" | "dinner";
 export type StoragePlace = "fridge" | "pantry" | "freezer";
 
-export type RecommendationFilters = { slot?: MealSlotId; source?: "forYou" | "pantry"; usingIngredientIds?: string[]; maxMinutes?: number };
+export type RecommendationFilters = { slot?: MealSlotId; source?: "forYou" | "pantry" | "library"; usingIngredientIds?: string[]; maxMinutes?: number };
 
 export type ChefAction =
       | { type: "openChef"; threadId?: string; prompt?: string }
@@ -30,6 +30,8 @@ export type RecipeCard = {
       pantryMatch: { have: number; total: number };
       isAdapted: boolean;
       isSaved: boolean;
+      /** Library recipe (in English): its macros are estimated, not added up from the catalog. */
+      nutritionEstimated?: boolean;
       reason?: { kind: "pantry" | "forYou" | "expiring"; label: string };
 };
 

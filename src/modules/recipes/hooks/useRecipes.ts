@@ -20,12 +20,16 @@ export function useRecipe(id: string | undefined, options: { servings?: number; 
       });
 }
 
+const FILLING_REFRESH_MS = 5_000;
+
 export function useRecommendations(filters: RecommendationFilters) {
       return useInfiniteQuery({
             queryKey: ["recommendations", filters],
             queryFn: ({ pageParam }) => recipesApi.recommendations(filters, pageParam),
             ...paged,
             getNextPageParam: nextPage,
+            // The backend is still bringing recipes this user can eat: look again until it is done.
+            refetchInterval: (query) => (query.state.data?.pages[0]?.meta.library?.status === "filling" ? FILLING_REFRESH_MS : false),
       });
 }
 

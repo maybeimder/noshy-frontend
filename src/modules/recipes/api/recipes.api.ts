@@ -1,6 +1,6 @@
 import { api, body, idempotent, newKey, unwrap, type Page } from "@/shared/lib/axios";
 import type { Facet, RecipeCard, RecommendationFilters } from "@/shared/types/api";
-import type { Comment, CookedRecipe, Creator, FeedItem, MyRecipe, MyRecipePatch, MyRecipeRow, RecipeDetail } from "../types";
+import type { Comment, CookedRecipe, LibraryMeta, Creator, FeedItem, MyRecipe, MyRecipePatch, MyRecipeRow, RecipeDetail } from "../types";
 
 export const recipesApi = {
       detail: (id: string, options: { servings?: number; adapted?: boolean } = {}) =>
@@ -13,7 +13,7 @@ export const recipesApi = {
             (on ? api.put<{ data: { liked: boolean; likes: number } }>(`/me/liked-recipes/${id}`) : api.delete<{ data: { liked: boolean; likes: number } }>(`/me/liked-recipes/${id}`)).then(unwrap),
       recommendations: ({ usingIngredientIds, ...filters }: RecommendationFilters, cursor?: string) =>
             api
-                  .get<Page<RecipeCard>>("/me/recommendations", { params: { ...filters, usingIngredientIds: usingIngredientIds?.join(","), cursor, limit: 12 } })
+                  .get<Page<RecipeCard, LibraryMeta>>("/me/recommendations", { params: { ...filters, usingIngredientIds: usingIngredientIds?.join(","), cursor, limit: 12 } })
                   .then(body),
       cooked: (filter: string, cursor?: string) =>
             api.get<Page<CookedRecipe, { facets: Facet[] }>>("/me/cooked-recipes", { params: { filter, cursor, limit: 24 } }).then(body),

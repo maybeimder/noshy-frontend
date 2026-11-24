@@ -14,7 +14,7 @@ export default function ExploreCard({ recipe, featured = false }: ExploreCardPro
       useSyncSaved(recipe.id, recipe.isSaved);
       const { have, total } = recipe.pantryMatch;
       const complete = total > 0 && have === total;
-      const meta = [formatTime(recipe.totalTimeMinutes), `${recipe.nutritionPerServing.kcal} kcal`].filter(Boolean).join(" · ");
+      const meta = [formatTime(recipe.totalTimeMinutes), `${recipe.nutritionEstimated ? "≈ " : ""}${recipe.nutritionPerServing.kcal} kcal`].filter(Boolean).join(" · ");
 
       return (
             <article className={`relative isolate overflow-hidden rounded-card bg-plum text-card shadow-[0_18px_36px_-24px_rgb(43_20_51/0.8)] ${featured ? "aspect-[4/3]" : "aspect-[4/5]"}`}>
@@ -43,16 +43,21 @@ export default function ExploreCard({ recipe, featured = false }: ExploreCardPro
                         )}
                   </Link>
 
-                  {total > 0 && (
-                        <span
-                              className={`pointer-events-none absolute top-3 left-3 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-extrabold ${
-                                    complete ? "bg-mint-soft text-mint-ink" : "bg-plum/60 text-card backdrop-blur-md"
-                              }`}
-                        >
-                              <Icon name={complete ? "check" : "pantry"} className="size-3.5" strokeWidth={2.5} />
-                              {have}/{total}
-                              <span className={featured ? "" : "sr-only"}> en tu despensa</span>
-                        </span>
+                  {/* Library recipes are not matched with the pantry: say where they come from instead of «0/8». */}
+                  {recipe.nutritionEstimated ? (
+                        <span className="pointer-events-none absolute top-3 left-3 inline-flex items-center rounded-full bg-plum/60 px-2.5 py-1 text-xs font-extrabold text-card backdrop-blur-md">Recetario</span>
+                  ) : (
+                        total > 0 && (
+                              <span
+                                    className={`pointer-events-none absolute top-3 left-3 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-extrabold ${
+                                          complete ? "bg-mint-soft text-mint-ink" : "bg-plum/60 text-card backdrop-blur-md"
+                                    }`}
+                              >
+                                    <Icon name={complete ? "check" : "pantry"} className="size-3.5" strokeWidth={2.5} />
+                                    {have}/{total}
+                                    <span className={featured ? "" : "sr-only"}> en tu despensa</span>
+                              </span>
+                        )
                   )}
                   <button
                         type="button"

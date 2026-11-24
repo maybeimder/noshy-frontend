@@ -1,5 +1,7 @@
 import { useId, useState } from "react";
 import Icon from "@/shared/components/ui/Icon";
+import IngredientIcon from "@/shared/components/ui/IngredientIcon";
+import Photo from "@/shared/components/ui/Photo";
 import { fieldClass } from "@/shared/components/ui/TextField";
 import { useIngredientSearch } from "../hooks/useInventory";
 import type { IngredientOption } from "../types";
@@ -52,6 +54,7 @@ export default function IngredientSearch({ label, placeholder = "Busca un ingred
                                                 }}
                                                 className="flex min-h-12 w-full items-center gap-3 py-2 text-left hover:bg-field focus-visible:outline-2 focus-visible:outline-primary-strong"
                                           >
+                                                <ProductThumb option={option} />
                                                 <span className="min-w-0 flex-1">
                                                       <span className="block font-bold text-ink">{option.label}</span>
                                                       {option.conflicts.length > 0 && (
@@ -69,5 +72,20 @@ export default function IngredientSearch({ label, placeholder = "Busca un ingred
                         </ul>
                   )}
             </div>
+      );
+}
+
+/** The product's photo; without one (or if it does not load), its pictogram on the brand gradient. */
+function ProductThumb({ option }: { option: IngredientOption }) {
+      return (
+            <span aria-hidden className="block size-12 shrink-0 overflow-hidden rounded-control bg-card shadow-soft">
+                  <Photo
+                        url={option.imageUrl}
+                        width={96}
+                        height={96}
+                        className="size-full object-contain"
+                        fallback={<IngredientIcon label={option.label} icon={option.icon} shape="bare" color="text-card" className="size-full bg-brand" />}
+                  />
+            </span>
       );
 }

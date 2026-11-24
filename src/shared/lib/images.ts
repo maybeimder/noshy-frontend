@@ -53,6 +53,11 @@ export function imageVariant(url: string, width: number, height?: number): strin
                   parsed.pathname = parsed.pathname.replace("/image/upload/", `/image/upload/${transform}/`);
                   return parsed.toString();
             }
+            // Open Food Facts keeps each photo at 100, 200 and 400 px: «front_es.4.400.jpg».
+            if (parsed.hostname === "images.openfoodfacts.org" && width <= 200) {
+                  parsed.pathname = parsed.pathname.replace(/\.400\.jpg$/, width <= 100 ? ".100.jpg" : ".200.jpg");
+                  return parsed.toString();
+            }
             if (parsed.hostname === "images.pexels.com") {
                   parsed.search = "";
                   parsed.searchParams.set("auto", "compress");
