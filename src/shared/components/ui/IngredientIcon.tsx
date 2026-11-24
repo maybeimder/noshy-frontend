@@ -57,7 +57,7 @@ type IngredientIconProps = {
       label: string;
       icon?: string | null;
       /** "tile": rounded square on its tone (rows) · "disc": white circle (cards on a tinted surface) · "bare": glyph only. */
-      shape?: "tile" | "disc" | "bare";
+      shape?: "tile" | "circle" | "disc" | "bare";
       /** Text colour class instead of the tone's own (e.g. to match a tinted card). */
       color?: string;
       className?: string;
@@ -68,7 +68,7 @@ export default function IngredientIcon({ label, icon, shape = "tile", color, cla
       const tone = tones[toneFor(label)];
       const glyph = glyphFor(icon, label);
       return (
-            <span aria-hidden className={`grid shrink-0 place-items-center font-display text-title font-extrabold ${shape === "tile" ? `rounded-control ${tone.soft}` : shape === "disc" ? "rounded-full bg-card" : ""} ${color ?? tone.ink} ${className}`}>
+            <span aria-hidden className={`grid shrink-0 place-items-center font-display text-title font-extrabold ${shape === "tile" ? `rounded-control ${tone.soft}` : shape === "circle" ? `rounded-full ${tone.soft}` : shape === "disc" ? "rounded-full bg-card" : ""} ${color ?? tone.ink} ${className}`}>
                   {glyph ? (
                         <svg viewBox="0 0 24 24" className="size-[55%]" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
                               <path d={glyphs[glyph]} />

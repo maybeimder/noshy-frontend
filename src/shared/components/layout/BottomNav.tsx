@@ -56,7 +56,7 @@ export default function BottomNav() {
                                                 }`}
                                           >
                                                 {/* Active: pink icon + heavier stroke + bold label, never color alone. */}
-                                                <Icon name={icon} className="size-6" strokeWidth={active ? 2.25 : 1.75} />
+                                                <Icon name={icon} className={`size-6 transition-[translate,stroke-width] duration-300 ease-out ${active ? "-translate-y-0.5" : ""}`} strokeWidth={active ? 2.25 : 1.75} />
                                                 {label}
                                           </Link>
                                     </li>

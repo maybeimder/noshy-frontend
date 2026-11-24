@@ -19,7 +19,7 @@ import CommentsDialog from "../components/CommentsDialog";
 import RecipeBody from "../components/RecipeBody";
 import RecipeHero, { heroButtonClass } from "../components/RecipeHero";
 import { RecipeDetailSkeleton } from "../components/RecipeSkeletons";
-import { useRecipe, useRecipeActions } from "../hooks/useRecipes";
+import { useRecipe, useRecipeActions, useSyncSaved } from "../hooks/useRecipes";
 
 export default function RecipeDetailPage() {
       const { id } = useParams();
@@ -30,6 +30,7 @@ export default function RecipeDetailPage() {
       const [original, setOriginal] = useState(false);
       const recipe = useRecipe(id, { servings, ...(original ? { adapted: false } : {}) });
       const { save, like } = useRecipeActions();
+      useSyncSaved(recipe.data?.id, recipe.data?.viewer.isSaved);
       const { addRecipe, addItems } = useShoppingMutations();
       const [question, setQuestion] = useState("");
       const [commentsOpen, setCommentsOpen] = useState(false);
@@ -72,7 +73,8 @@ export default function RecipeDetailPage() {
             <>
                   <RecipeHero
                         recipe={r}
-                        backTo="/recetas"
+                        // Opened without history (a reload, a shared link): back to the tab this kind of recipe lives in.
+                        backTo={mine ? "/recetas" : r.author.type === "user" ? "/recetas?ver=comunidad" : "/recetas?ver=explorar"}
                         action={
                               <div className="flex gap-2">
                                     <button type="button" aria-label="Compartir" className={heroButtonClass} onClick={async () => setShared(await shareText(r.title, `${r.title}\n${window.location.origin}/recetas/${r.id}`))}>
@@ -83,7 +85,7 @@ export default function RecipeDetailPage() {
                                           aria-label={r.viewer.isLiked ? "Quitar me gusta" : "Me gusta"}
                                           aria-pressed={r.viewer.isLiked}
                                           disabled={like.isPending}
-                                          className={heroButtonClass}
+                                          className={`toggle-pop ${heroButtonClass}`}
                                           onClick={() => like.mutate({ id: r.id, on: !r.viewer.isLiked })}
                                     >
                                           <Icon name="heart" className={`size-6 ${r.viewer.isLiked ? "fill-current text-primary" : ""}`} />
@@ -238,7 +240,7 @@ export default function RecipeDetailPage() {
                                           aria-pressed={r.viewer.isSaved}
                                           disabled={save.isPending}
                                           onClick={() => save.mutate({ id: r.id, on: !r.viewer.isSaved })}
-                                          className="grid size-14 shrink-0 place-items-center rounded-full bg-primary-soft text-primary-strong hover:bg-rose-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong disabled:opacity-60"
+                                          className="toggle-pop grid size-14 shrink-0 place-items-center rounded-full bg-primary-soft text-primary-strong hover:bg-rose-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong disabled:opacity-60"
                                     >
                                           <Icon name="bookmark" className={`size-6 ${r.viewer.isSaved ? "fill-current" : ""}`} />
                                     </button>

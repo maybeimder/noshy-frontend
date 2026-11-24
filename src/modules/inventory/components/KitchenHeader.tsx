@@ -40,22 +40,25 @@ export default function KitchenHeader({ title, meta, actions }: KitchenHeaderPro
       }, [open]);
 
       return (
-            <header className="mx-auto flex max-w-xl items-center gap-3 px-5 pt-6 pb-2">
+            <header className="mx-auto flex max-w-xl items-end gap-3 px-5 pt-6 pb-3">
                   <div ref={root} className="relative min-w-0 flex-1">
-                        <h1 className="text-section leading-tight font-extrabold whitespace-nowrap text-ink">
+                        {/* As in the design: the count sits over the title. */}
+                        {meta === null ? <SkText size="sm" w="w-32" className="mb-1" /> : meta && <p className="mb-1 truncate text-sm font-semibold text-ink-muted">{meta}</p>}
+                        <h1 className="text-[clamp(1.35rem,5.9vw,1.85rem)] leading-[1.15] font-extrabold text-ink">
                               <button
                                     type="button"
                                     aria-expanded={open}
                                     aria-controls={menuId}
                                     aria-label={`${title}: cambiar de sección`}
                                     onClick={() => setOpen((v) => !v)}
-                                    className="-ml-1 flex max-w-full items-center gap-1 overflow-hidden rounded-control px-1 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong"
+                                    className="group -ml-1 flex max-w-full items-center gap-1.5 rounded-control px-1 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong"
                               >
-                                    <Icon name="chevronDown" className={`size-6 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} strokeWidth={2.5} />
-                                    <MarkerText>{title}</MarkerText>
+                                    <span className="min-w-0 pb-0.5 text-balance">
+                                          <MarkerText>{title}</MarkerText>
+                                    </span>
+                                    <Icon name="chevronDown" className={`size-5 shrink-0 text-ink-muted transition-transform group-hover:text-ink ${open ? "rotate-180" : ""}`} strokeWidth={2.5} />
                               </button>
                         </h1>
-                        {meta === null ? <SkText size="sm" w="w-32" className="mt-1" /> : meta && <p className="mt-1 truncate text-sm font-semibold text-ink-muted">{meta}</p>}
                         {open && (
                               <ul id={menuId} className="absolute top-full left-0 z-30 mt-2 w-60 rounded-card bg-card p-2 shadow-[0_18px_40px_-16px_rgb(43_20_51/0.45)]">
                                     {kitchenSections.map((section) => {

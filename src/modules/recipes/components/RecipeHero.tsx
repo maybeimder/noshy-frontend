@@ -39,12 +39,13 @@ export default function RecipeHero({ recipe, backTo, action, children }: RecipeH
                         />
                   </span>
                   <span aria-hidden className="absolute inset-0 bg-[linear-gradient(180deg,rgb(29_9_44/0.45)_0%,transparent_25%,transparent_40%,rgb(29_9_44/0.9)_85%)]" />
-                  <div className="absolute top-5 left-5">
+                  <div className="absolute top-5 left-5 z-10">
                         <button type="button" onClick={goBack} aria-label="Volver" className={heroButtonClass}>
                               <Icon name="back" />
                         </button>
                   </div>
-                  {action && <div className="absolute top-5 right-5">{action}</div>}
+                  {action && <div className="absolute top-5 right-5 z-10">{action}</div>}
+                  {/* Below the buttons: the title block spans the whole photo and would swallow their taps. */}
                   {children && <div className="relative flex min-h-[28rem] flex-col justify-end px-5 pt-24 pb-14 text-card">{children}</div>}
             </div>
       );

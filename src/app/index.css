@@ -205,6 +205,234 @@
       }
 }
 
+/* Cooking mode: the lit part of the heat bar breathes like a flame; content eases in when the step or sub-step changes. */
+@keyframes heat-flicker {
+      0%,
+      100% {
+            background-position: 0% 50%;
+            filter: brightness(1);
+      }
+      50% {
+            background-position: 100% 50%;
+            filter: brightness(1.12);
+      }
+}
+
+@utility heat-flicker {
+      background-image: linear-gradient(90deg, var(--color-noodle), var(--color-secondary), var(--color-tomato), var(--color-primary), var(--color-secondary));
+      background-size: 220% 100%;
+      animation: heat-flicker 2.6s ease-in-out infinite;
+
+      @media (prefers-reduced-motion: reduce) {
+            animation: none;
+            background-size: 100% 100%;
+      }
+}
+
+@keyframes heat-glow {
+      0%,
+      100% {
+            box-shadow: 0 0 0 0 rgb(233 75 151 / 0.55);
+      }
+      50% {
+            box-shadow: 0 0 0 6px rgb(233 75 151 / 0);
+      }
+}
+
+@utility heat-glow {
+      animation: heat-glow 2.6s ease-out infinite;
+
+      @media (prefers-reduced-motion: reduce) {
+            animation: none;
+      }
+}
+
+@keyframes cook-fade {
+      from {
+            opacity: 0.35;
+            translate: 0 4px;
+      }
+}
+
+@utility cook-fade {
+      animation: cook-fade 380ms cubic-bezier(0.16, 1, 0.3, 1) both;
+
+      @media (prefers-reduced-motion: reduce) {
+            animation: none;
+      }
+}
+
+/* ---------- Motion (nov 2026). One curve for arrivals; every loop and movement stops with reduced motion. ---------- */
+
+/* Title highlights are drawn like a felt-tip pass, left to right, once per mount. */
+@keyframes marker-draw {
+      from {
+            background-size: 0% 100%;
+      }
+}
+
+@utility marker-draw {
+      background-repeat: no-repeat;
+      background-size: 100% 100%;
+      animation: marker-draw 750ms cubic-bezier(0.16, 1, 0.3, 1) 120ms both;
+
+      @media (prefers-reduced-motion: reduce) {
+            animation: none;
+      }
+}
+
+/* «Tu chef está pensando»: steam rising off the pot, one wisp after another. */
+@keyframes steam-rise {
+      0%,
+      100% {
+            opacity: 0.25;
+            translate: 0 2px;
+      }
+      45% {
+            opacity: 1;
+            translate: 0 -3px;
+      }
+}
+
+@utility steam-dot {
+      animation: steam-rise 1.3s ease-in-out infinite;
+      animation-delay: var(--delay, 0ms);
+
+      @media (prefers-reduced-motion: reduce) {
+            animation-duration: 2.4s;
+            translate: none;
+      }
+}
+
+/* Feedback: a tick or a heart answers the tap with a short swell. */
+@keyframes pop-in {
+      from {
+            opacity: 0;
+            scale: 0.4;
+      }
+      60% {
+            scale: 1.15;
+      }
+}
+
+@utility pop-in {
+      animation: pop-in 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+
+      @media (prefers-reduced-motion: reduce) {
+            animation: none;
+      }
+}
+
+/* Toggle buttons (like, save): the icon swells when it turns on; the rule starts matching, so it replays each time. */
+@keyframes toggle-pop {
+      40% {
+            scale: 1.3;
+      }
+}
+
+@utility toggle-pop {
+      & > svg {
+            transition: scale 150ms ease-out;
+      }
+      &:active > svg {
+            scale: 0.85;
+      }
+      &[aria-pressed="true"] > svg {
+            animation: toggle-pop 320ms cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+            &[aria-pressed="true"] > svg {
+                  animation: none;
+            }
+      }
+}
+
+/* Progress fills grow from the start on mount, then follow width changes. */
+@keyframes bar-fill {
+      from {
+            scale: 0 1;
+      }
+}
+
+@utility bar-fill {
+      transform-origin: left center;
+      animation: bar-fill 700ms cubic-bezier(0.16, 1, 0.3, 1) 150ms both;
+
+      @media (prefers-reduced-motion: reduce) {
+            animation: none;
+      }
+}
+
+/* Chat: a new message settles in from below its own corner. */
+@keyframes msg-in {
+      from {
+            opacity: 0;
+            translate: 0 8px;
+            scale: 0.97;
+      }
+}
+
+@utility msg-in {
+      animation: msg-in 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+
+      @media (prefers-reduced-motion: reduce) {
+            animation-name: fade-in;
+      }
+}
+
+@keyframes fade-in {
+      from {
+            opacity: 0;
+      }
+}
+
+/* Dialogs and sheets: rise and fade in, leave a touch faster. */
+@layer base {
+      dialog {
+            transition:
+                  opacity 200ms ease-out,
+                  translate 200ms ease-out,
+                  overlay 200ms allow-discrete,
+                  display 200ms allow-discrete;
+            opacity: 0;
+            translate: 0 16px;
+      }
+      dialog[open] {
+            opacity: 1;
+            translate: 0 0;
+            transition-duration: 320ms;
+            transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      @starting-style {
+            dialog[open] {
+                  opacity: 0;
+                  translate: 0 16px;
+            }
+      }
+      dialog::backdrop {
+            transition:
+                  opacity 250ms ease-out,
+                  overlay 250ms allow-discrete,
+                  display 250ms allow-discrete;
+            opacity: 0;
+      }
+      dialog[open]::backdrop {
+            opacity: 1;
+      }
+      @starting-style {
+            dialog[open]::backdrop {
+                  opacity: 0;
+            }
+      }
+      @media (prefers-reduced-motion: reduce) {
+            dialog,
+            dialog[open] {
+                  translate: none;
+            }
+      }
+}
+
 /* Hand-drawn "sticker": ink outline with a hard offset shadow (¡Te extrañé!, quick replies). */
 @utility sticker {
       border: 2px solid var(--color-ink);

@@ -1,6 +1,12 @@
-import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { keepPreviousData, useInfiniteQuery, useMutation, useQueries, useQuery, useQueryClient, type InfiniteData, type QueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/modules/auth/hooks/useAuth";
+import { useUserValue } from "@/shared/lib/user-store";
+import type { Page } from "@/shared/lib/axios";
+import type { RecipeCard } from "@/shared/types/api";
 import type { RecommendationFilters } from "@/shared/types/api";
 import { recipesApi } from "../api/recipes.api";
+import type { FeedItem, RecipeDetail } from "../types";
 
 const paged = { initialPageParam: undefined as string | undefined };
 const nextPage = (page: { meta: { nextCursor: string | null } }) => page.meta.nextCursor ?? undefined;
@@ -66,14 +72,113 @@ function useInvalidate(...keys: string[]) {
       return () => Promise.all(keys.map((key) => queryClient.invalidateQueries({ queryKey: [key] })));
 }
 
+type Flags = { liked?: boolean; saved?: boolean; likes?: number };
+
+/** Writes a like or a save into every cached copy of the recipe, so the heart answers at the tap. */
+function patchRecipe(queryClient: QueryClient, id: string, flags: Flags) {
+      queryClient.setQueriesData<RecipeDetail>({ queryKey: ["recipe", id] }, (old) =>
+            old && {
+                  ...old,
+                  isSaved: flags.saved ?? old.isSaved,
+                  viewer: { isLiked: flags.liked ?? old.viewer.isLiked, isSaved: flags.saved ?? old.viewer.isSaved },
+            },
+      );
+      queryClient.setQueriesData<InfiniteData<Page<FeedItem>>>({ queryKey: ["feed"] }, (old) =>
+            old && {
+                  ...old,
+                  pages: old.pages.map((page) => ({
+                        ...page,
+                        data: page.data.map((item) => {
+                              if (item.recipe.id !== id) return item;
+                              const liked = flags.liked ?? item.viewer.liked;
+                              const likes = flags.likes ?? item.stats.likes + (liked === item.viewer.liked ? 0 : liked ? 1 : -1);
+                              return { ...item, viewer: { liked, saved: flags.saved ?? item.viewer.saved }, stats: { ...item.stats, likes } };
+                        }),
+                  })),
+            },
+      );
+      if (flags.saved !== undefined) {
+            queryClient.setQueriesData<InfiniteData<Page<RecipeCard>>>({ queryKey: ["recommendations"] }, (old) =>
+                  old && { ...old, pages: old.pages.map((page) => ({ ...page, data: page.data.map((r) => (r.id === id ? { ...r, isSaved: flags.saved! } : r)) })) },
+            );
+      }
+}
+
+/** Optimistic toggle: paint now, undo if the API says no, then settle with the server's numbers. */
+/**
+ * Recipes the user saved, newest first. The API stores saves but has no endpoint that lists them
+ * (proposed: GET /me/saved-recipes), so this device remembers the ids it saved or saw saved.
+ */
+export function useSavedIds() {
+      const { user } = useAuth();
+      const [ids, setIds] = useUserValue<string[]>(user?.id ?? "anon", "savedRecipeIds");
+      const list = ids ?? [];
+      return {
+            ids: list,
+            mark: (id: string, on: boolean) => {
+                  if (on === list.includes(id)) return;
+                  setIds(on ? [id, ...list] : list.filter((x) => x !== id));
+            },
+      };
+}
+
+/** Keeps the local list in step with what the API says about one recipe. */
+export function useSyncSaved(id: string | undefined, isSaved: boolean | undefined) {
+      const { ids, mark } = useSavedIds();
+      const known = id ? ids.includes(id) : false;
+      useEffect(() => {
+            if (id && isSaved !== undefined && isSaved !== known) mark(id, isSaved);
+            // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, [id, isSaved, known]);
+}
+
+/** The saved recipes themselves, one detail request each (cached with the recipe screens). */
+export function useSavedRecipes() {
+      const { ids } = useSavedIds();
+      const results = useQueries({
+            queries: ids.map((id) => ({ queryKey: ["recipe", id, {}], queryFn: () => recipesApi.detail(id), staleTime: 5 * 60_000, retry: false })),
+      });
+      return {
+            pending: results.some((r) => r.isPending),
+            // A recipe that no longer exists (404) simply drops out.
+            recipes: results.flatMap((r) => (r.data && r.data.viewer.isSaved ? [r.data] : [])),
+      };
+}
+
+function useToggle<T>(
+      mutationFn: (input: { id: string; on: boolean }) => Promise<T>,
+      flag: "liked" | "saved",
+      settle: (result: T) => Flags,
+      onDone?: (id: string, on: boolean) => void,
+) {
+      const queryClient = useQueryClient();
+      const after = useInvalidate("recipe", "feed", "recommendations", "home");
+      return useMutation({
+            mutationFn,
+            onMutate: async ({ id, on }) => {
+                  await queryClient.cancelQueries({ queryKey: ["recipe", id] });
+                  await queryClient.cancelQueries({ queryKey: ["feed"] });
+                  const snapshot = [...queryClient.getQueriesData({ queryKey: ["recipe", id] }), ...queryClient.getQueriesData({ queryKey: ["feed"] }), ...queryClient.getQueriesData({ queryKey: ["recommendations"] })];
+                  patchRecipe(queryClient, id, { [flag]: on });
+                  return { snapshot };
+            },
+            onError: (_error, _input, context) => context?.snapshot.forEach(([key, data]) => queryClient.setQueryData(key, data)),
+            onSuccess: (result, { id, on }) => {
+                  patchRecipe(queryClient, id, settle(result));
+                  onDone?.(id, on);
+            },
+            onSettled: after,
+      });
+}
+
 export function useRecipeActions() {
-      const afterFlag = useInvalidate("recipe", "feed", "recommendations", "home");
+      const saved = useSavedIds();
       const afterFollow = useInvalidate("creators", "feed");
       const afterComment = useInvalidate("comments", "feed");
       const afterAdapt = useInvalidate("recipe");
       return {
-            save: useMutation({ mutationFn: recipesApi.setSaved, onSuccess: afterFlag }),
-            like: useMutation({ mutationFn: recipesApi.setLiked, onSuccess: afterFlag }),
+            save: useToggle(recipesApi.setSaved, "saved", () => ({}), saved.mark),
+            like: useToggle(recipesApi.setLiked, "liked", (result) => ({ liked: result.liked, likes: result.likes })),
             follow: useMutation({ mutationFn: recipesApi.setFollowing, onSuccess: afterFollow }),
             comment: useMutation({ mutationFn: recipesApi.addComment, onSuccess: afterComment }),
             adapt: useMutation({ mutationFn: recipesApi.applyAdaptation, onSuccess: afterAdapt }),

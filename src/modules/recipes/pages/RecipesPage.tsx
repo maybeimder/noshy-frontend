@@ -17,9 +17,10 @@ import { useRememberShape } from "@/shared/hooks/useShape";
 import { formatTime } from "@/shared/lib/format";
 import type { MealSlotId, RecipeCard, RecommendationFilters } from "@/shared/types/api";
 import CommentsDialog from "../components/CommentsDialog";
+import ExploreCard from "../components/ExploreCard";
 import RecipeGridCard, { coverBadge } from "../components/RecipeGridCard";
 import { FeedSkeleton, GridSkeleton, MineSkeleton, type FeedShape, type ListShape } from "../components/RecipeSkeletons";
-import { useCreators, useFeed, useMyRecipes, useRecipeActions, useRecommendations } from "../hooks/useRecipes";
+import { useCreators, useFeed, useMyRecipes, useRecipeActions, useRecommendations, useSavedRecipes } from "../hooks/useRecipes";
 import type { FeedItem, MyRecipeStatus } from "../types";
 
 const tabs = [
@@ -101,6 +102,7 @@ const statuses: Record<MyRecipeStatus, { label: string; icon: IconName }> = {
 
 function Mine() {
       const mine = useMyRecipes();
+      const saved = useSavedRecipes();
       useRememberShape<ListShape>("mine", mine.data ? { count: Math.min(8, mine.data.pages[0]!.data.length) } : null);
       if (mine.isPending) return <MineSkeleton />;
       if (mine.isError) return <ErrorState message={mine.error.message} onRetry={() => mine.refetch()} />;
@@ -139,6 +141,31 @@ function Mine() {
                         </li>
                   </ul>
                   <LoadMore query={mine} />
+
+                  <section aria-labelledby="saved" className="mt-2 flex flex-col gap-3">
+                        <div className="flex items-baseline justify-between gap-3">
+                              <h2 id="saved" className="text-section font-extrabold text-ink">
+                                    <MarkerText>Guardadas</MarkerText>
+                              </h2>
+                              {saved.recipes.length > 0 && <span className="text-sm font-bold text-ink-muted">{saved.recipes.length}</span>}
+                        </div>
+                        {saved.pending && saved.recipes.length === 0 ? (
+                              <GridSkeleton name="saved" />
+                        ) : saved.recipes.length === 0 ? (
+                              <p className="flex items-start gap-3 rounded-card bg-card p-4 text-sm text-ink-muted shadow-soft">
+                                    <Icon name="bookmark" className="size-5 shrink-0 text-primary-strong" />
+                                    Toca el marcador en una receta, o «Guardar» en las que te propone tu chef, y la encuentras aquí.
+                              </p>
+                        ) : (
+                              <ul className="grid grid-cols-2 gap-3">
+                                    {saved.recipes.map((recipe) => (
+                                          <li key={recipe.id}>
+                                                <ExploreCard recipe={recipe} />
+                                          </li>
+                                    ))}
+                              </ul>
+                        )}
+                  </section>
             </>
       );
 }
@@ -164,9 +191,18 @@ function Explore() {
 
       return (
             <>
-                  <Link to={`/chef?mensaje=${encodeURIComponent("Invéntame una receta con lo que tengo en mi despensa")}`} className={`${buttonBase} ${buttonVariants.dark} min-h-12 text-sm`}>
-                        <Icon name="sparkle" className="size-5" />
-                        Pedirle una receta a tu chef
+                  <Link
+                        to={`/chef?mensaje=${encodeURIComponent("Invéntame una receta con lo que tengo en mi despensa")}`}
+                        className="group flex items-center gap-3 rounded-full bg-plum-glow p-2 text-card shadow-[0_16px_32px_-20px_rgb(43_20_51/0.8)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong"
+                  >
+                        <MascotAvatar tone="white" className="size-12" />
+                        <span className="min-w-0 flex-1">
+                              <span className="block font-display font-extrabold">¿No ves lo que se te antoja?</span>
+                              <span className="block text-sm text-card/80">Pídele una receta a tu chef</span>
+                        </span>
+                        <span className="grid size-11 shrink-0 place-items-center rounded-full bg-primary-strong transition-transform group-hover:translate-x-0.5">
+                              <Icon name="arrowRight" className="size-5" strokeWidth={2.25} />
+                        </span>
                   </Link>
                   <Chips
                         bleed
@@ -206,21 +242,25 @@ function Explore() {
                   ) : list.length === 0 ? (
                         <EmptyState icon="search" title="Sin ideas con estos filtros" description="Prueba con más tiempo o con otra fuente." />
                   ) : (
-                        <ul className="grid grid-cols-2 gap-3">
-                              {list.map((recipe) => (
-                                    <li key={recipe.id}>
-                                          <RecipeGridCard recipe={recipe} meta={cardMeta(recipe)} badge={recipe.reason && <span className={coverBadge}>{recipe.reason.label}</span>} />
-                                    </li>
-                              ))}
-                        </ul>
+                        <>
+                              <p className="text-sm font-semibold text-ink-muted">
+                                    {list.length} {list.length === 1 ? "receta" : "recetas"}
+                                    {source === "pantry" ? " con lo que tienes" : " para ti"}
+                              </p>
+                              <ul className="grid grid-cols-2 gap-3">
+                                    {list.map((recipe, index) => (
+                                          <li key={recipe.id} className={index === 0 ? "col-span-2" : ""}>
+                                                <ExploreCard recipe={recipe} featured={index === 0} />
+                                          </li>
+                                    ))}
+                              </ul>
+                        </>
                   )}
                   <LoadMore query={ideas} />
             </>
       );
 }
 
-const cardMeta = (recipe: Pick<RecipeCard, "totalTimeMinutes" | "nutritionPerServing">) =>
-      [formatTime(recipe.totalTimeMinutes), `${recipe.nutritionPerServing.kcal} kcal`].filter(Boolean).join(" · ");
 
 function Community() {
       const [filter, setFilter] = useState("trending");
@@ -346,7 +386,7 @@ function FeedCard({ item }: { item: FeedItem }) {
                         </li>
                   </ul>
                   <div className="flex items-center gap-1 px-2 pt-1 pb-3">
-                        <button type="button" aria-pressed={viewer.liked} aria-label={`Me gusta (${stats.likes})`} disabled={like.isPending} onClick={() => like.mutate({ id: recipe.id, on: !viewer.liked })} className={stat}>
+                        <button type="button" aria-pressed={viewer.liked} aria-label={`Me gusta (${stats.likes})`} disabled={like.isPending} onClick={() => like.mutate({ id: recipe.id, on: !viewer.liked })} className={`toggle-pop ${stat}`}>
                               <Icon name="heart" className={`size-5 ${viewer.liked ? "fill-current text-primary" : ""}`} />
                               {stats.likes}
                         </button>
@@ -354,7 +394,7 @@ function FeedCard({ item }: { item: FeedItem }) {
                               <Icon name="chat" className="size-5" />
                               {stats.comments}
                         </button>
-                        <button type="button" aria-pressed={viewer.saved} aria-label="Guardar" disabled={save.isPending} onClick={() => save.mutate({ id: recipe.id, on: !viewer.saved })} className={stat}>
+                        <button type="button" aria-pressed={viewer.saved} aria-label="Guardar" disabled={save.isPending} onClick={() => save.mutate({ id: recipe.id, on: !viewer.saved })} className={`toggle-pop ${stat}`}>
                               <Icon name="bookmark" className={`size-5 ${viewer.saved ? "fill-current" : ""}`} />
                         </button>
                         {item.chefConsultable && (

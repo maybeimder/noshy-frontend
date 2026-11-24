@@ -8,6 +8,7 @@ import Icon from "@/shared/components/ui/Icon";
 import { MascotAvatar } from "@/shared/components/ui/MascotBubble";
 import { EmptyState, ErrorState } from "@/shared/components/ui/QueryState";
 import RoundButton from "@/shared/components/ui/RoundButton";
+import { useRecipe } from "@/modules/recipes/hooks/useRecipes";
 import { cookApi, type CookingEvent, type CookingSession } from "../api/cook.api";
 import { useRememberShape } from "@/shared/hooks/useShape";
 import CookSkeleton, { type CookShape } from "../components/CookSkeleton";
@@ -167,6 +168,13 @@ function Cooking({ session }: { session: CookingSession }) {
       const isLast = stepIndex === session.steps.length - 1;
       const heatLevel = sub?.heatLevel || step.heat.level;
       const heatKey = sub?.heatChange ? `${step.index}-${sub.index}` : null;
+      // Steps from the API may come without their own ingredients: then the recipe's, scaled to these servings.
+      const recipe = useRecipe(step.ingredients.length ? undefined : session.recipe.id, { servings: session.servings });
+      const stepText = `${step.title} ${step.subSteps.map((x) => x.text).join(" ")}`.toLowerCase();
+      const mentioned = (label: string) => label.toLowerCase().split(/[\s,]+/).some((word) => word.length > 3 && stepText.includes(word));
+      const summary = step.ingredients.length
+            ? step.ingredients.map((i) => ({ label: i.prep ? `${i.label}, ${i.prep}` : i.label, quantity: i.quantity.display, here: true }))
+            : (recipe.data?.ingredients ?? []).map((i) => ({ label: i.prep ? `${i.label}, ${i.prep}` : i.label, quantity: i.quantity.display, here: mentioned(i.label) }));
 
       useEffect(() => {
             if (!("speechSynthesis" in window)) return;
@@ -225,7 +233,10 @@ function Cooking({ session }: { session: CookingSession }) {
       return (
             <main className="mx-auto flex min-h-dvh max-w-xl flex-col pb-32">
                   {/* Plum panel: the active timer and the heat, readable from the stove. */}
-                  <section aria-label="Temporizador y calor" className="rounded-b-[2rem] bg-plum-glow px-5 pt-5 pb-6 text-card shadow-[0_18px_36px_-24px_rgb(43_20_51/0.8)]">
+                  <section
+                        aria-label="Temporizador y calor"
+                        className="rounded-b-[2rem] bg-[radial-gradient(120%_80%_at_90%_0%,color-mix(in_srgb,var(--color-wine)_70%,transparent),transparent_60%),linear-gradient(172deg,var(--color-plum)_0%,var(--color-wine)_58%,color-mix(in_srgb,var(--color-primary-strong)_72%,var(--color-wine))_100%)] px-5 pt-5 pb-6 text-card shadow-[0_18px_36px_-24px_rgb(43_20_51/0.8)]"
+                  >
                         <header className="flex items-center gap-3">
                               <button type="button" aria-label="Salir" onClick={() => setLeaving(true)} className={glassButton}>
                                     <Icon name="close" />
@@ -278,12 +289,17 @@ function Cooking({ session }: { session: CookingSession }) {
                                     aria-valuemax={MAX_HEAT}
                                     aria-valuenow={heatLevel}
                                     aria-valuetext={heatName(heatLevel)}
-                                    className="relative mt-3 h-2.5 rounded-full bg-[linear-gradient(90deg,var(--color-mustard),var(--color-secondary),var(--color-tomato))]"
+                                    className="relative mt-3 h-2.5 rounded-full bg-[linear-gradient(90deg,var(--color-cream),var(--color-noodle)_35%,var(--color-secondary)_60%,var(--color-tomato)_82%,var(--color-primary))] opacity-95"
                               >
+                                    {/* Above the lit part the bar rests; the lit part breathes like a flame. */}
+                                    <span aria-hidden className="absolute inset-y-0 right-0 rounded-r-full bg-plum/55 transition-[left] duration-500 ease-out" style={{ left: `${(heatLevel / MAX_HEAT) * 100}%` }} />
+                                    {heatLevel > 0 && (
+                                          <span aria-hidden className="heat-flicker absolute inset-y-0 left-0 rounded-full transition-[width] duration-500 ease-out" style={{ width: `${(heatLevel / MAX_HEAT) * 100}%` }} />
+                                    )}
                                     <span aria-hidden className="absolute top-1/2 left-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-card/70" />
                                     <span
                                           aria-hidden
-                                          className="absolute top-1/2 size-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-card bg-primary-strong shadow-soft transition-[left] duration-500 ease-out"
+                                          className={`absolute top-1/2 size-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-4 border-card shadow-soft transition-[left] duration-500 ease-out ${heatLevel > 0 ? "heat-glow bg-primary-strong" : "bg-ink-muted"}`}
                                           style={{ left: `${(heatLevel / MAX_HEAT) * 100}%` }}
                                     />
                               </div>
@@ -326,7 +342,7 @@ function Cooking({ session }: { session: CookingSession }) {
                               ))}
                         </div>
 
-                        <section aria-live="polite" className="border-b border-line pb-5">
+                        <section key={`head-${step.index}`} aria-live="polite" className="cook-fade border-b border-line pb-5">
                               <p className="font-serif text-base font-semibold text-primary-strong italic">
                                     Paso {spell(stepIndex + 1)} de {spell(session.steps.length)}
                               </p>
@@ -351,23 +367,32 @@ function Cooking({ session }: { session: CookingSession }) {
                               </ul>
                         </section>
 
-                        {step.ingredients.length > 0 && (
-                              <section aria-labelledby="for-step" className="border-b border-line pb-5">
+                        {summary.length > 0 && (
+                              <section key={`ing-${step.index}`} aria-labelledby="for-step" className="cook-fade border-b border-line pb-5">
                                     <h2 id="for-step" className="mb-2 font-sans text-xs font-extrabold tracking-wider text-ink-muted uppercase">
-                                          Para este paso
+                                          {step.ingredients.length ? "Para este paso" : `Ingredientes · ${session.servings} ${session.servings === 1 ? "porción" : "porciones"}`}
                                     </h2>
                                     <ul className="flex flex-col">
-                                          {step.ingredients.map((i, index) => (
-                                                <li key={index} className="flex items-baseline gap-3 py-1.5 font-serif text-[1.05rem] text-ink">
-                                                      <span className="min-w-0">
-                                                            {i.label}
-                                                            {i.prep && <span className="text-ink-muted">, {i.prep}</span>}
-                                                      </span>
-                                                      <span aria-hidden className="min-w-6 flex-1 translate-y-[-0.3em] border-b border-line" />
-                                                      <span className="shrink-0 font-bold">{i.quantity.display}</span>
+                                          {summary.map((i, index) => (
+                                                <li
+                                                      key={index}
+                                                      className={`flex items-baseline gap-2 py-1.5 font-serif text-[1.05rem] transition-opacity duration-300 ${i.here ? "text-ink" : "text-ink opacity-70"}`}
+                                                >
+                                                      {!step.ingredients.length && (
+                                                            <span aria-hidden className={`size-1.5 shrink-0 -translate-y-[0.2em] self-center rounded-full ${i.here ? "bg-primary-strong" : "bg-line"}`} />
+                                                      )}
+                                                      <span className="min-w-0">{i.label}</span>
+                                                      <span aria-hidden className="min-w-6 flex-1 -translate-y-[0.3em] border-b-2 border-dotted border-line" />
+                                                      <span className="shrink-0 font-bold tabular-nums">{i.quantity}</span>
                                                 </li>
                                           ))}
                                     </ul>
+                                    {!step.ingredients.length && summary.some((x) => x.here) && (
+                                          <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-ink-muted">
+                                                <span aria-hidden className="size-1.5 rounded-full bg-primary-strong" />
+                                                Los que usas en este paso
+                                          </p>
+                                    )}
                               </section>
                         )}
 
@@ -380,22 +405,62 @@ function Cooking({ session }: { session: CookingSession }) {
                                           const current = index === activeSub;
                                           const done = index < activeSub;
                                           return (
-                                                <li key={`${step.index}-${s.index}`}>
+                                                <li key={`${step.index}-${s.index}`} className={`cook-fade transition-opacity duration-300 ease-out ${current ? "opacity-100" : done ? "opacity-45" : "opacity-60"}`}>
                                                       <button
                                                             type="button"
                                                             aria-current={current ? "step" : undefined}
                                                             onClick={() => setActiveSub(index)}
                                                             className="group flex w-full items-start gap-3 rounded-control py-2 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong"
                                                       >
-                                                            <span className={`w-6 shrink-0 font-serif text-[1.75rem] leading-none font-bold ${done ? "text-primary/40" : "text-primary-strong"}`}>
+                                                            {/* Serif numeral in the brand pink: the accent of each sub-step. */}
+                                                            <span className={`w-7 shrink-0 font-serif text-[1.85rem] leading-none font-bold tabular-nums ${current ? "text-primary-strong" : "text-primary"}`}>
                                                                   {index + 1}
                                                             </span>
-                                                            <span className={`min-w-0 flex-1 font-serif text-[1.05rem] leading-relaxed ${done ? "text-ink-muted/70" : "text-ink"} group-hover:text-ink`}>{s.text}</span>
+                                                            <span className={`min-w-0 flex-1 font-serif text-[1.05rem] leading-relaxed text-ink ${current ? "" : "group-hover:opacity-80"}`}>{s.text}</span>
                                                             {s.timerSeconds ? (
-                                                                  <span className={`mt-0.5 shrink-0 rounded-full px-2.5 py-0.5 text-xs font-extrabold tabular-nums ${current ? "bg-primary-soft text-primary-strong" : done ? "bg-field/60 text-ink-muted/60" : "bg-field text-ink-muted"}`}>
+                                                                  <span className={`mt-0.5 shrink-0 rounded-full px-2.5 py-0.5 text-xs font-extrabold tabular-nums ${current ? "bg-primary-soft text-primary-strong" : "bg-field text-ink-muted"}`}>
                                                                         {clock(s.timerSeconds).replace(/^0/, "")}
                                                                   </span>
                                                             ) : null}
+                                                      </button>
+                                                </li>
+                                          );
+                                    })}
+                              </ol>
+                        </section>
+
+                        <section aria-labelledby="timeline" className="border-t border-line pt-5">
+                              <h2 id="timeline" className="mb-3 font-sans text-xs font-extrabold tracking-wider text-ink-muted uppercase">
+                                    Tu receta, paso a paso
+                              </h2>
+                              <ol className="flex flex-col">
+                                    {session.steps.map((st, index) => {
+                                          const here = index === stepIndex;
+                                          const past = index < stepIndex;
+                                          return (
+                                                <li key={st.index} className="relative flex gap-3 pb-4 last:pb-0">
+                                                      {index < session.steps.length - 1 && (
+                                                            <span aria-hidden className={`absolute top-8 bottom-0 left-[15px] w-0.5 rounded-full ${past ? "bg-primary-strong" : "bg-line"}`} />
+                                                      )}
+                                                      <button
+                                                            type="button"
+                                                            aria-current={here ? "step" : undefined}
+                                                            onClick={() => (here ? undefined : go(index))}
+                                                            className="group flex w-full items-start gap-3 rounded-control text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong"
+                                                      >
+                                                            <span
+                                                                  className={`relative grid size-8 shrink-0 place-items-center rounded-full font-serif text-base font-bold transition-colors ${
+                                                                        here ? "bg-brand text-card shadow-brand" : past ? "bg-primary-soft text-primary-strong" : "border-2 border-line bg-card text-ink-muted"
+                                                                  }`}
+                                                            >
+                                                                  {past ? <Icon name="check" className="size-4" strokeWidth={3} /> : index + 1}
+                                                            </span>
+                                                            <span className={`min-w-0 flex-1 pt-1 transition-opacity duration-300 ${here ? "" : "opacity-60 group-hover:opacity-90"}`}>
+                                                                  <span className={`block font-serif text-[1.05rem] leading-snug ${here ? "font-bold text-ink" : "text-ink"}`}>{st.title}</span>
+                                                                  <span className="block text-xs font-semibold text-ink-muted">
+                                                                        {[minutes(st.durationSeconds), st.heat.level > 0 ? `Fuego ${st.heat.label.toLowerCase()}` : null, past ? "Hecho" : here ? "Ahora" : null].filter(Boolean).join(" · ")}
+                                                                  </span>
+                                                            </span>
                                                       </button>
                                                 </li>
                                           );

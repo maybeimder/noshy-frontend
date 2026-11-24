@@ -8,7 +8,7 @@ import Button, { buttonBase, buttonVariants } from "@/shared/components/ui/Butto
 import Chips from "@/shared/components/ui/Chips";
 import Dialog from "@/shared/components/ui/Dialog";
 import FormAlert from "@/shared/components/ui/FormAlert";
-import Icon from "@/shared/components/ui/Icon";
+import Icon, { type IconName } from "@/shared/components/ui/Icon";
 import IngredientIcon from "@/shared/components/ui/IngredientIcon";
 import Mascot from "@/shared/components/ui/Mascot";
 import { ErrorState } from "@/shared/components/ui/QueryState";
@@ -19,6 +19,8 @@ import { useRememberShape } from "@/shared/hooks/useShape";
 import { newKey } from "@/shared/lib/axios";
 import { formatDate, formatMoney, dayToDate, plural } from "@/shared/lib/format";
 import { shareText } from "@/shared/lib/share";
+import RecipeSection, { type StoreScope } from "../components/RecipeSection";
+import RecipeShopper from "../components/RecipeShopper";
 import ShoppingSkeleton, { type ShoppingShape } from "../components/ShoppingSkeleton";
 import { useShoppingList, useShoppingMutations } from "../hooks/useShoppingList";
 import type { CheckoutResult, ShoppingItem, ShoppingList } from "../types";
@@ -30,6 +32,36 @@ export default function ShoppingListPage() {
       const [addOpen, setAddOpen] = useState(false);
       const [notice, setNotice] = useState<string | null>(null);
       const [done, setDone] = useState<CheckoutResult | null>(null);
+      const [forRecipe, setForRecipe] = useState(false);
+      // Store mode opened from a recipe shows only what that recipe still needs.
+      const [scope, setScope] = useState<StoreScope | null>(null);
+      const shopFor = (next: StoreScope) => {
+            setScope(next);
+            setFilter("all");
+            setStoreMode(true);
+            window.scrollTo({ top: 0, behavior: "smooth" });
+      };
+      const leaveStore = () => {
+            setStoreMode(false);
+            setScope(null);
+      };
+      const shopper = <RecipeShopper open={forRecipe} onClose={() => setForRecipe(false)} onShop={shopFor} />;
+      const forRecipeButton = (
+            <button
+                  type="button"
+                  onClick={() => setForRecipe(true)}
+                  className="group flex items-center gap-3 rounded-card border-2 border-dashed border-primary/40 bg-card/60 p-3 text-left transition-colors hover:bg-card focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong"
+            >
+                  <span className="grid size-11 shrink-0 place-items-center rounded-full bg-primary-soft text-primary-strong">
+                        <Icon name="book" className="size-5" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                        <span className="block font-display font-extrabold text-ink">Comprar para una receta</span>
+                        <span className="block text-sm text-ink-muted">Te digo qué tienes y qué te falta</span>
+                  </span>
+                  <Icon name="chevronRight" className="size-5 shrink-0 text-primary-strong transition-transform group-hover:translate-x-0.5" />
+            </button>
+      );
       const list = useShoppingList(storeMode ? "storeLayout" : "category");
       const { addItems, share } = useShoppingMutations();
       const nudge = useNudge("shoppingList");
@@ -94,16 +126,24 @@ export default function ShoppingListPage() {
                                           Ver recetas
                                     </Link>
                               </section>
+                              {forRecipeButton}
                               {add}
                         </main>
+                        {shopper}
                   </>
             );
       }
 
       const data = list.data;
       const { inCart, total } = data.progress;
-      const matches = (item: ShoppingItem) => storeMode || filter === "all" || (filter === "fridge" ? item.storage === "fridge" : item.categoryId === filter);
+      const matches = (item: ShoppingItem) =>
+            storeMode ? !scope || scope.ingredientIds.includes(item.ingredientId) : filter === "all" || (filter === "fridge" ? item.storage === "fridge" : item.categoryId === filter);
+      const byIngredient = new Map(data.groups.flatMap((g) => g.items).map((i) => [i.ingredientId, i]));
       const groups = data.groups.map((g) => ({ ...g, items: g.items.filter(matches) })).filter((g) => g.items.length > 0);
+      // A recipe's store run counts only its own items.
+      const scopedItems = storeMode && scope ? groups.flatMap((g) => g.items) : null;
+      const shownInCart = scopedItems ? scopedItems.filter((i) => i.checked).length : inCart;
+      const shownTotal = scopedItems ? scopedItems.length : total;
 
       return (
             <>
@@ -115,14 +155,14 @@ export default function ShoppingListPage() {
                                     <RoundButton label={addOpen ? "Cerrar agregar" : "Agregar a la lista"} onClick={() => setAddOpen((v) => !v)}>
                                           <Icon name={addOpen ? "close" : "plus"} strokeWidth={2.25} />
                                     </RoundButton>
-                                    <RoundButton tone="primary" label="Compartir lista" onClick={() => onShare(data)}>
+                                    <RoundButton tone="primary" size="lg" label="Compartir lista" onClick={() => onShare(data)}>
                                           <Icon name="share" strokeWidth={2.25} />
                                     </RoundButton>
                               </>
                         }
                   />
 
-                  <main className="mx-auto flex max-w-xl flex-col gap-5 px-5 pt-3 pb-28">
+                  <main className="mx-auto flex max-w-xl flex-col gap-5 px-5 pt-3 pb-48">
                         {doneNotice}
                         {notice && (
                               <p role="status" className="rounded-control bg-field p-3 text-sm font-bold text-ink">
@@ -137,11 +177,20 @@ export default function ShoppingListPage() {
                                     <Icon name="store" className="size-6 shrink-0 text-secondary" />
                                     <p className="min-w-0 flex-1 text-sm">
                                           <strong className="block font-display text-base">Modo tienda · {data.store.name}</strong>
-                                          Por pasillos, con el precio real a mano.
+                                          {scope ? (
+                                                <>
+                                                      Solo para <strong>{scope.title}</strong>.{" "}
+                                                      <button type="button" onClick={() => setScope(null)} className="font-extrabold text-secondary underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-card">
+                                                            Ver toda la lista
+                                                      </button>
+                                                </>
+                                          ) : (
+                                                "Por pasillos, con el precio real a mano."
+                                          )}
                                     </p>
                                     <button
                                           type="button"
-                                          onClick={() => setStoreMode(false)}
+                                          onClick={leaveStore}
                                           className="min-h-11 shrink-0 rounded-full bg-card/15 px-4 text-sm font-extrabold hover:bg-card/25 focus-visible:outline-2 focus-visible:outline-card"
                                     >
                                           Salir
@@ -149,32 +198,41 @@ export default function ShoppingListPage() {
                               </div>
                         )}
 
-                        <section aria-label="Resumen" className="rounded-card bg-[linear-gradient(110deg,var(--color-secondary)_0%,var(--color-salmon)_60%,var(--color-primary)_100%)] p-5 text-ink shadow-soft">
-                              <div className="flex items-start justify-between gap-3">
-                                    <div className="min-w-0">
-                                          <p className="text-xs font-extrabold tracking-wider uppercase">Gastado hasta ahora</p>
-                                          <p className="mt-1 font-display text-metric font-extrabold tabular-nums">{formatMoney(data.totals.spent)}</p>
-                                          <p className="text-sm font-bold">
-                                                de {formatMoney(data.totals.estimated)} estimado · {data.store.name}
-                                          </p>
-                                    </div>
+                        <section
+                              aria-label="Resumen"
+                              className="rounded-[1.75rem] bg-[linear-gradient(120deg,color-mix(in_srgb,var(--color-primary)_45%,var(--color-salmon))_0%,var(--color-salmon)_45%,var(--color-secondary)_100%)] p-5 text-ink shadow-[0_18px_36px_-20px_rgb(233_130_95/0.8)]"
+                        >
+                              <p className="text-xs font-extrabold tracking-wider uppercase">Gastado hasta ahora</p>
+                              <p className="mt-1 font-display text-metric leading-none font-extrabold tabular-nums">{formatMoney(data.totals.spent)}</p>
+                              <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                                    <p className="text-sm font-bold">
+                                          de {formatMoney(data.totals.estimated)} estimado · {data.store.name}
+                                    </p>
                                     {data.totals.savings.amount > 0 && (
-                                          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-card/90 px-3 py-1.5 text-xs font-extrabold text-rose-ink tabular-nums">
-                                                <Icon name="tag" className="size-3.5" strokeWidth={2.25} />
+                                          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-card px-3 py-1.5 text-xs font-extrabold text-ink shadow-soft tabular-nums">
+                                                <Icon name="tag" className="size-3.5 text-primary-strong" strokeWidth={2.25} />
                                                 Ahorras {formatMoney(data.totals.savings)}
                                           </span>
                                     )}
                               </div>
                               <div className="mt-4 flex items-center gap-3">
-                                    <div role="progressbar" aria-label="Compras hechas" aria-valuemin={0} aria-valuemax={total} aria-valuenow={inCart} className="h-2.5 flex-1 overflow-hidden rounded-full bg-card/60">
-                                          <div className="h-full rounded-full bg-plum transition-[width] duration-500 ease-out" style={{ width: `${total ? (inCart / total) * 100 : 0}%` }} />
+                                    <div role="progressbar" aria-label="Compras hechas" aria-valuemin={0} aria-valuemax={shownTotal} aria-valuenow={shownInCart} className="h-2.5 flex-1 overflow-hidden rounded-full bg-card/70">
+                                          <div className="bar-fill h-full rounded-full bg-plum transition-[width] duration-500 ease-out" style={{ width: `${shownTotal ? (shownInCart / shownTotal) * 100 : 0}%` }} />
                                     </div>
                                     <p className="shrink-0 text-sm font-extrabold tabular-nums">
-                                          {inCart}/{total} en el carrito
+                                          {shownInCart}/{shownTotal} en el carrito
                                     </p>
                               </div>
-                              {data.recipes.length > 0 && <p className="mt-2 truncate text-sm font-semibold">Para {data.recipes.map((r) => r.title).join(", ")}</p>}
                         </section>
+
+                        {!storeMode && (
+                              <>
+                                    {data.recipes.map((recipe) => (
+                                          <RecipeSection key={recipe.recipeId} recipe={recipe} items={byIngredient} onShop={shopFor} />
+                                    ))}
+                                    {forRecipeButton}
+                              </>
+                        )}
 
                         {!storeMode && data.filters.length > 2 && (
                               <Chips
@@ -182,16 +240,16 @@ export default function ShoppingListPage() {
                                     label="Filtrar"
                                     value={filter}
                                     onChange={setFilter}
-                                    options={data.filters.map((f) => ({ id: f.id, label: f.count === undefined ? f.label : `${f.label} ${f.count}`, icon: f.id === "fridge" ? ("pantry" as const) : f.id === "all" ? undefined : ("sprout" as const) }))}
+                                    options={data.filters.map((f) => ({ id: f.id, label: f.label, count: f.count, icon: filterIcons[f.id] }))}
                               />
                         )}
 
                         {groups.map((group) => (
                               <section key={group.id} aria-labelledby={group.id} className="flex flex-col gap-2">
-                                    <h2 id={group.id} className={data.groups.length > 1 || storeMode ? "font-sans text-xs font-extrabold tracking-wider text-ink-muted uppercase" : "sr-only"}>
+                                    <h2 id={group.id} className={storeMode ? "font-sans text-xs font-extrabold tracking-wider text-ink-muted uppercase" : "sr-only"}>
                                           {group.label}
                                     </h2>
-                                    <ul className="flex flex-col gap-2">
+                                    <ul className="flex flex-col divide-y divide-line rounded-[1.75rem] bg-card px-3 shadow-soft">
                                           {/* In the aisle, what is already in the cart sinks to the bottom. */}
                                           {(storeMode ? [...group.items].sort((a, b) => Number(a.checked) - Number(b.checked)) : group.items).map((item) => (
                                                 <ItemRow key={item.id} listId={data.id} item={item} storeMode={storeMode} />
@@ -200,22 +258,46 @@ export default function ShoppingListPage() {
                               </section>
                         ))}
                         {total === 0 && <p className="py-6 text-center text-ink-muted">Tu lista está vacía.</p>}
+                        {storeMode && scope && groups.length === 0 && <p className="py-6 text-center text-ink-muted">Nada de {scope.title} quedó en la lista.</p>}
 
                         {storeMode ? (
                               inCart > 0 && <Checkout list={data} onDone={setDone} />
                         ) : (
                               total > 0 && (
                                     <div className="fixed inset-x-4 bottom-24 z-10 mx-auto max-w-xl">
-                                          <Button size="lg" fullWidth arrow="store" onClick={() => setStoreMode(true)}>
+                                          <Button
+                                                size="lg"
+                                                fullWidth
+                                                onClick={() => {
+                                                      setScope(null);
+                                                      setStoreMode(true);
+                                                }}
+                                                className="text-title"
+                                          >
+                                                <Icon name="store" className="size-5" strokeWidth={2} />
                                                 Activar modo tienda
                                           </Button>
                                     </div>
                               )
                         )}
                   </main>
+                  {shopper}
             </>
       );
 }
+
+/** One pictogram per shelf, as in the design's filter row. */
+const filterIcons: Record<string, IconName | undefined> = {
+      fridge: "pantry",
+      produce: "leaf",
+      protein: "meat",
+      seafood: "fish",
+      dairy: "milk",
+      bakery: "bread",
+      staples: "store",
+      spices: "sparkle",
+      freezer: "pantry",
+};
 
 const headerRoom = [0, 1].map((i) => <Sk key={i} className="size-12 rounded-full" />);
 
@@ -242,7 +324,7 @@ function ItemRow({ listId, item, storeMode }: { listId: string; item: ShoppingIt
       const price$ = item.price.actual ?? item.price.estimated;
 
       return (
-            <li className={`flex flex-col gap-2 rounded-card p-3 shadow-soft transition-colors ${checked ? "bg-card/70" : "bg-card"}`}>
+            <li className="flex flex-col gap-2 py-3">
                   <div className="flex items-center gap-3">
                         <label className={`flex min-w-0 flex-1 cursor-pointer items-center gap-3 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-primary-strong ${storeMode ? "min-h-14" : "min-h-11"}`}>
                               <input
@@ -256,33 +338,39 @@ function ItemRow({ listId, item, storeMode }: { listId: string; item: ShoppingIt
                                     className="sr-only"
                               />
                               <span aria-hidden className={`grid shrink-0 place-items-center rounded-full transition-colors ${storeMode ? "size-8" : "size-7"} ${checked ? "bg-primary-strong text-card" : "border-2 border-line bg-card"}`}>
-                                    {checked && <Icon name="check" className="size-4" strokeWidth={3} />}
+                                    {checked && <Icon name="check" className="pop-in size-4" strokeWidth={3} />}
                               </span>
-                              <IngredientIcon label={item.label} icon={item.icon} />
+                              <IngredientIcon label={item.label} icon={item.icon} className="size-10" />
                               <span className="min-w-0 flex-1">
-                                    <span className={`block truncate font-display font-extrabold ${checked ? "text-ink-muted line-through" : "text-ink"}`}>{item.label}</span>
+                                    <span className={`block truncate font-display font-extrabold transition-colors ${checked ? "text-ink-muted" : "text-ink"}`}>{item.label}</span>
                                     {item.product?.brand && <span className="block truncate text-xs font-semibold text-ink-muted">{item.product.brand}</span>}
                               </span>
                         </label>
-                        <div className="flex shrink-0 flex-col items-end gap-1">
-                              <span className={`rounded-full border-2 px-2.5 py-0.5 text-sm font-extrabold tabular-nums ${checked ? "border-primary text-ink" : "border-transparent bg-field text-ink-muted"}`}>
-                                    {item.quantity.display}
-                              </span>
-                              <button
-                                    type="button"
-                                    aria-expanded={priceOpen}
-                                    aria-label={`Precio de ${item.label}: ${formatMoney(price$)}. Cambiar`}
-                                    onClick={() => {
-                                          setPrice(String(price$.amount));
-                                          setPriceOpen((v) => !v);
-                                    }}
-                                    className="inline-flex min-h-8 items-center gap-1 rounded-full px-1.5 text-xs font-extrabold text-ink-muted tabular-nums hover:bg-field hover:text-ink focus-visible:outline-2 focus-visible:outline-primary-strong"
-                              >
-                                    {!item.price.actual && "≈ "}
-                                    {formatMoney(price$)}
-                                    <Icon name="edit" className="size-3.5" />
-                              </button>
-                        </div>
+                        <span
+                              className={`shrink-0 rounded-full border-2 px-3 py-1 text-sm tabular-nums transition-colors ${
+                                    checked ? "border-primary/60 bg-card font-extrabold text-ink" : "border-transparent bg-field font-semibold text-ink-muted"
+                              }`}
+                        >
+                              {item.quantity.display}
+                        </span>
+                  </div>
+                  <div className="-mt-1 pl-[5.25rem]">
+                        <button
+                              type="button"
+                              aria-expanded={priceOpen}
+                              aria-label={`Precio de ${item.label}: ${formatMoney(price$)}. Cambiar`}
+                              onClick={() => {
+                                    setPrice(String(price$.amount));
+                                    setPriceOpen((v) => !v);
+                              }}
+                              className={`inline-flex min-h-8 items-center gap-1 rounded-full border px-2.5 text-xs tabular-nums transition-colors hover:border-primary/50 focus-visible:outline-2 focus-visible:outline-primary-strong ${
+                                    checked ? "border-line bg-card font-extrabold text-ink" : "border-line/70 font-semibold text-ink-muted"
+                              }`}
+                        >
+                              {!item.price.actual && "≈ "}
+                              {formatMoney(price$)}
+                              <Icon name="edit" className="size-3" />
+                        </button>
                   </div>
 
                   {priceOpen && (
@@ -302,7 +390,7 @@ function ItemRow({ listId, item, storeMode }: { listId: string; item: ShoppingIt
                   )}
 
                   {item.suggestion && (
-                        <div className="ml-10 flex items-center gap-3 rounded-control border-2 border-dashed border-primary/30 bg-primary-soft/60 p-3">
+                        <div className="ml-[5.25rem] flex items-center gap-3 rounded-control bg-primary-soft p-3">
                               <Icon name="sparkle" className="size-4 shrink-0 text-primary-strong" strokeWidth={2.25} />
                               <p className="min-w-0 flex-1 text-sm text-ink">
                                     <strong className="block font-display">

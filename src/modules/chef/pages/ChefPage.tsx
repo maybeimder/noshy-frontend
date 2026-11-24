@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { cookApi } from "@/modules/cook/api/cook.api";
-import { useRecipeActions } from "@/modules/recipes/hooks/useRecipes";
+import { useRecipeActions, useSyncSaved } from "@/modules/recipes/hooks/useRecipes";
 import { useShoppingMutations } from "@/modules/shopping-list/hooks/useShoppingList";
 import Button, { buttonBase, buttonVariants } from "@/shared/components/ui/Button";
 import DishCover from "@/shared/components/ui/DishArt";
@@ -19,6 +19,7 @@ import { formatTime } from "@/shared/lib/format";
 import type { RecipeCard } from "@/shared/types/api";
 import { useRememberShape } from "@/shared/hooks/useShape";
 import ChefMarkdown from "../components/ChefMarkdown";
+import ChefThinking from "../components/ChefThinking";
 import { ChefBubbles, type ChefShape } from "../components/ChefSkeleton";
 import { useChefThread, useThreadId } from "../hooks/useChefThread";
 import type { ChefBlock, ChefInput, ChefMessage } from "../types";
@@ -121,11 +122,7 @@ export default function ChefPage() {
                                                 />
                                           ))}
                                     </ol>
-                                    {send.isPending && last?.role === "user" && (
-                                          <p role="status" className="text-sm font-semibold text-ink-muted">
-                                                Tu chef está pensando…
-                                          </p>
-                                    )}
+                                    {send.isPending && last?.role === "user" && <ChefThinking />}
                                     {(send.error ?? feedback.error) && <FormAlert>{(send.error ?? feedback.error)!.message}</FormAlert>}
                               </>
                         )}
@@ -184,18 +181,14 @@ type MessageRowProps = {
 function MessageRow({ message, interactive, waiting, onSend, onRate }: MessageRowProps) {
       if (message.role === "user") {
             const text = message.blocks.map((b) => (b.type === "text" ? b.text : "")).join(" ");
-            return <li className="max-w-[85%] self-end rounded-card rounded-br-md bg-brand px-4 py-3 font-bold whitespace-pre-wrap text-card shadow-brand">{text}</li>;
+            return <li className="msg-in max-w-[85%] origin-bottom-right self-end rounded-card rounded-br-md bg-brand px-4 py-3 font-bold whitespace-pre-wrap text-card shadow-brand">{text}</li>;
       }
       return (
             <li className="flex flex-col gap-3">
                   {message.blocks.map((block) => (
                         <Block key={block.id} block={block} message={message} interactive={interactive} onSend={onSend} onRate={onRate} />
                   ))}
-                  {waiting && message.blocks.length === 0 && (
-                        <p role="status" className="text-sm font-semibold text-ink-muted">
-                              Tu chef está pensando…
-                        </p>
-                  )}
+                  {waiting && message.blocks.length === 0 && <ChefThinking />}
             </li>
       );
 }
@@ -211,7 +204,7 @@ function Block({ block, message, interactive, onSend, onRate }: { block: ChefBlo
       switch (block.type) {
             case "text":
                   return (
-                        <div className="max-w-[92%] self-start rounded-card rounded-tl-md bg-card px-4 py-3 text-ink shadow-soft">
+                        <div className="msg-in max-w-[92%] origin-top-left self-start rounded-card rounded-tl-md bg-card px-4 py-3 text-ink shadow-soft">
                               <ChefMarkdown>{block.text}</ChefMarkdown>
                         </div>
                   );
@@ -304,6 +297,7 @@ function ChefRecipe({ recipe, actions }: { recipe: RecipeCard; actions: ("save" 
       const queryClient = useQueryClient();
       const cook = useMutation({ mutationFn: cookApi.start, onSuccess: (session) => queryClient.setQueryData(["cookingSession", session.id], session) });
       const saved = save.isSuccess ? save.variables.on : recipe.isSaved;
+      useSyncSaved(recipe.id, saved);
       const activeId = cook.data?.id ?? (cook.error instanceof ApiError && cook.error.code === "SESSION_ALREADY_ACTIVE" ? String(cook.error.details.sessionId) : null);
       const error = save.error ?? addRecipe.error ?? (activeId ? null : cook.error);
 
@@ -312,7 +306,7 @@ function ChefRecipe({ recipe, actions }: { recipe: RecipeCard; actions: ("save" 
             "grid size-12 shrink-0 place-items-center rounded-full bg-primary-soft text-primary-strong hover:bg-rose-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong disabled:opacity-60";
 
       return (
-            <article className="overflow-hidden rounded-card bg-card shadow-[0_16px_32px_-20px_rgb(43_20_51/0.6)]">
+            <article className="msg-in overflow-hidden rounded-card bg-card shadow-[0_16px_32px_-20px_rgb(43_20_51/0.6)]">
                   <Link to={`/recetas/${recipe.id}`} className="relative block h-44 bg-plum text-card focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-strong">
                         <span className="absolute inset-0">
                               <Photo url={recipe.imageUrl} width={800} height={352} className="size-full object-cover" fallback={<DishCover seed={recipe.id} className="size-full" />} />
@@ -333,7 +327,7 @@ function ChefRecipe({ recipe, actions }: { recipe: RecipeCard; actions: ("save" 
                         <MacroTiles macros={recipe.nutritionPerServing} size="sm" />
                         <div className="flex items-center gap-2">
                               {actions.includes("save") && (
-                                    <button type="button" aria-label={saved ? "Quitar de guardadas" : "Guardar"} aria-pressed={saved} disabled={save.isPending} onClick={() => save.mutate({ id: recipe.id, on: !saved })} className={round}>
+                                    <button type="button" aria-label={saved ? "Quitar de guardadas" : "Guardar"} aria-pressed={saved} disabled={save.isPending} onClick={() => save.mutate({ id: recipe.id, on: !saved })} className={`toggle-pop ${round}`}>
                                           <Icon name="bookmark" className={`size-5 ${saved ? "fill-current" : ""}`} />
                                     </button>
                               )}

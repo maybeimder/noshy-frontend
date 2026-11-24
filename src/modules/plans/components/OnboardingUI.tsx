@@ -83,7 +83,7 @@ export function CheckMark({ checked, shape = "square" }: { checked: boolean; sha
       if (shape === "radio") {
             return (
                   <span aria-hidden className={`grid size-7 shrink-0 place-items-center rounded-full border-2 ${checked ? "border-primary-strong" : "border-line"}`}>
-                        {checked && <span className="size-3.5 rounded-full bg-primary-strong" />}
+                        {checked && <span className="pop-in size-3.5 rounded-full bg-primary-strong" />}
                   </span>
             );
       }
@@ -92,7 +92,7 @@ export function CheckMark({ checked, shape = "square" }: { checked: boolean; sha
                   aria-hidden
                   className={`grid size-7 shrink-0 place-items-center rounded-full ${checked ? "bg-primary-strong text-card" : "border-2 border-line bg-card"}`}
             >
-                  {checked && <Icon name="check" className="size-4" strokeWidth={3} />}
+                  {checked && <Icon name="check" className="pop-in size-4" strokeWidth={3} />}
             </span>
       );
 }
@@ -111,7 +111,7 @@ type OptionCardProps = {
 export function OptionCard({ type, name, checked, onChange, disabled, children, className = "" }: OptionCardProps) {
       return (
             <label
-                  className={`relative flex cursor-pointer rounded-card border-2 transition-colors has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-primary-strong has-disabled:cursor-not-allowed has-disabled:opacity-60 ${
+                  className={`relative flex cursor-pointer rounded-card border-2 transition-[border-color,background-color,scale] active:scale-[0.98] has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-primary-strong has-disabled:cursor-not-allowed has-disabled:opacity-60 ${
                         checked ? "border-primary bg-picked shadow-soft" : "border-transparent bg-card shadow-soft hover:border-line"
                   } ${className}`}
             >
@@ -146,11 +146,11 @@ export function Chip({ selected, onClick, children, role }: ChipProps) {
                   aria-pressed={role ? undefined : selected}
                   aria-checked={role ? selected : undefined}
                   onClick={onClick}
-                  className={`inline-flex min-h-11 items-center gap-1.5 rounded-full px-4 text-sm font-extrabold transition-colors ${focusRing} ${
+                  className={`inline-flex min-h-11 items-center gap-1.5 rounded-full px-4 text-sm font-extrabold transition-[background-color,scale] active:scale-95 ${focusRing} ${
                         selected ? "bg-brand text-card shadow-brand" : "border-2 border-line bg-card text-ink hover:border-primary/40"
                   }`}
             >
-                  {selected && <Icon name="check" className="size-4" strokeWidth={3} />}
+                  {selected && <Icon name="check" className="pop-in size-4" strokeWidth={3} />}
                   {children}
             </button>
       );

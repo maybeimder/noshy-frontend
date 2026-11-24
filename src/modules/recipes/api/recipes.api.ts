@@ -8,7 +8,9 @@ export const recipesApi = {
       applyAdaptation: ({ recipeId, proposalId }: { recipeId: string; proposalId: string }) =>
             api.post<{ data: RecipeDetail }>(`/recipes/${recipeId}/adaptations`, { proposalId }).then(unwrap),
       setSaved: ({ id, on }: { id: string; on: boolean }) => (on ? api.put(`/me/saved-recipes/${id}`) : api.delete(`/me/saved-recipes/${id}`)).then(() => undefined),
-      setLiked: ({ id, on }: { id: string; on: boolean }) => (on ? api.put(`/me/liked-recipes/${id}`) : api.delete(`/me/liked-recipes/${id}`)).then(() => undefined),
+      /** Answers the new state and the public count: { liked, likes }. */
+      setLiked: ({ id, on }: { id: string; on: boolean }) =>
+            (on ? api.put<{ data: { liked: boolean; likes: number } }>(`/me/liked-recipes/${id}`) : api.delete<{ data: { liked: boolean; likes: number } }>(`/me/liked-recipes/${id}`)).then(unwrap),
       recommendations: ({ usingIngredientIds, ...filters }: RecommendationFilters, cursor?: string) =>
             api
                   .get<Page<RecipeCard>>("/me/recommendations", { params: { ...filters, usingIngredientIds: usingIngredientIds?.join(","), cursor, limit: 12 } })

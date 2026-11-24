@@ -153,7 +153,7 @@ function Insights() {
                                     ))}
                                     <span className="flex w-full items-center gap-3">
                                           <span aria-hidden className="h-1.5 flex-1 overflow-hidden rounded-full bg-card/15">
-                                                <span className="block h-full rounded-full bg-brand" style={{ width: `${Math.round(insight.confidence * 100)}%` }} />
+                                                <span className="bar-fill block h-full rounded-full bg-brand" style={{ width: `${Math.round(insight.confidence * 100)}%` }} />
                                           </span>
                                           <span className="shrink-0 text-xs font-semibold text-card/75">{insight.evidence.label}</span>
                                     </span>

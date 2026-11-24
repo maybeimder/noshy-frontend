@@ -28,7 +28,7 @@ export default function DayCard({ day }: { day: DaySummary }) {
                         </span>
                   </div>
                   <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-field">
-                        <div className="h-full rounded-full bg-[linear-gradient(90deg,var(--color-secondary),var(--color-primary))]" style={{ width: `${Math.max(2, share * 100)}%` }} />
+                        <div className="bar-fill h-full rounded-full bg-[linear-gradient(90deg,var(--color-secondary),var(--color-primary))] transition-[width] duration-500 ease-out" style={{ width: `${Math.max(2, share * 100)}%` }} />
                   </div>
                   <dl className="mt-4 grid grid-cols-3 gap-4">
                         {macros.map(({ key, label, tone, bar }) => (
@@ -40,7 +40,7 @@ export default function DayCard({ day }: { day: DaySummary }) {
                                           </dd>
                                     </div>
                                     <div aria-hidden className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-field">
-                                          <div className={`h-full rounded-full ${bar}`} style={{ width: `${Math.max(2, shareOf(consumed[key], target[key]) * 100)}%` }} />
+                                          <div className={`bar-fill h-full rounded-full transition-[width] duration-500 ease-out ${bar}`} style={{ width: `${Math.max(2, shareOf(consumed[key], target[key]) * 100)}%` }} />
                                     </div>
                               </div>
                         ))}

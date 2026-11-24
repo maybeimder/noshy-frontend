@@ -11,8 +11,6 @@ import Icon from "@/shared/components/ui/Icon";
 import IngredientIcon from "@/shared/components/ui/IngredientIcon";
 import LoadMore from "@/shared/components/ui/LoadMore";
 import { EmptyState, ErrorState } from "@/shared/components/ui/QueryState";
-import RoundButton from "@/shared/components/ui/RoundButton";
-import { MarkerText } from "@/shared/components/ui/ScribbleText";
 import { fieldClass } from "@/shared/components/ui/TextField";
 import { useRememberShape } from "@/shared/hooks/useShape";
 import { useDebounced } from "@/shared/hooks/useDebounced";
@@ -35,9 +33,9 @@ function expiryLabel(day: string) {
 }
 
 const soonLooks = [
-      { card: "bg-[linear-gradient(180deg,var(--color-rose-soft),var(--color-card))]", ink: "text-rose-ink", chip: "bg-primary-strong text-card" },
-      { card: "bg-[linear-gradient(180deg,var(--color-mustard-soft),var(--color-card))]", ink: "text-mustard-ink", chip: "bg-mustard-soft text-mustard-ink" },
-      { card: "bg-[linear-gradient(180deg,var(--color-lilac-soft),var(--color-card))]", ink: "text-lilac-ink", chip: "bg-lilac-soft text-lilac-ink" },
+      { card: "bg-[linear-gradient(160deg,var(--color-rose-soft),var(--color-peach-soft))]", ink: "text-rose-ink", chip: "bg-card text-primary-strong" },
+      { card: "bg-[linear-gradient(160deg,var(--color-mustard-soft),color-mix(in_srgb,var(--color-secondary)_45%,var(--color-peach-soft)))]", ink: "text-mustard-ink", chip: "bg-card text-primary-strong" },
+      { card: "bg-[linear-gradient(160deg,var(--color-sky-soft),var(--color-lilac-soft))]", ink: "text-lilac-ink", chip: "bg-card text-primary-strong" },
 ];
 
 export default function PantryPage() {
@@ -71,30 +69,7 @@ export default function PantryPage() {
                   <KitchenHeader
                         title="Mi despensa"
                         meta={loading ? null : overview.data ? `${plural(overview.data.totalItems, "ingrediente", "ingredientes")} · hoy` : undefined}
-                        actions={
-                              <>
-                                    <RoundButton
-                                          label={searchOpen ? "Cerrar filtro" : "Filtrar mi despensa"}
-                                          onClick={() => {
-                                                setSearchOpen((v) => !v);
-                                                setSearch("");
-                                                setAddOpen(false);
-                                          }}
-                                    >
-                                          <Icon name={searchOpen ? "close" : "search"} />
-                                    </RoundButton>
-                                    <RoundButton label={addOpen ? "Cerrar añadir ingrediente" : "Añadir ingrediente"} onClick={() => {
-                                                setAddOpen((v) => !v);
-                                                setAddQuery(undefined);
-                                                setSearchOpen(false);
-                                                setSearch("");
-                                          }}
-                                    >
-                                          <Icon name={addOpen ? "close" : "plus"} strokeWidth={2.25} />
-                                    </RoundButton>
-                                    <ReceiptScanner variant="button" />
-                              </>
-                        }
+                        actions={<ReceiptScanner variant="button" />}
                   />
 
                   {loading ? (
@@ -116,19 +91,28 @@ export default function PantryPage() {
                               </label>
                         )}
 
-                        {(addOpen || empty) && <AddPantryItem key={addQuery ?? ""} initialQuery={addQuery} />}
+                        {(addOpen || empty) && (
+                              <div className="flex flex-col gap-2">
+                                    <AddPantryItem key={addQuery ?? ""} initialQuery={addQuery} />
+                                    {!empty && (
+                                          <button type="button" onClick={() => setAddOpen(false)} className="min-h-11 self-center rounded-full px-4 text-sm font-bold text-ink-muted hover:text-ink focus-visible:outline-2 focus-visible:outline-primary-strong">
+                                                Cerrar
+                                          </button>
+                                    )}
+                              </div>
+                        )}
                         {nudge.data && <NudgeCard nudge={nudge.data} />}
 
                         {overview.data && !empty && (
                               <Link
                                     to="/recetas?ver=explorar&fuente=pantry"
-                                    className="group relative flex min-h-40 overflow-hidden rounded-card bg-[linear-gradient(110deg,var(--color-secondary)_0%,var(--color-salmon)_55%,var(--color-primary)_100%)] p-5 shadow-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong"
+                                    className="group relative -mx-5 flex min-h-48 overflow-hidden bg-[linear-gradient(105deg,color-mix(in_srgb,var(--color-primary)_40%,var(--color-salmon))_0%,var(--color-salmon)_38%,var(--color-secondary)_100%)] px-5 py-6 shadow-[0_18px_36px_-24px_rgb(233_130_95/0.9)] focus-visible:outline-2 focus-visible:-outline-offset-4 focus-visible:outline-plum"
                               >
                                     {[0, 1].map((n) => (
                                           <span
                                                 key={n}
                                                 aria-hidden
-                                                className={`absolute overflow-hidden rounded-full border-4 border-card bg-card shadow-soft ${n === 0 ? "-top-3 -right-4 size-32" : "right-14 -bottom-6 size-24"}`}
+                                                className={`absolute overflow-hidden rounded-full border-[6px] border-card/90 bg-card shadow-[0_12px_28px_-12px_rgb(43_20_51/0.55)] transition-transform duration-500 ease-out group-hover:scale-105 ${n === 0 ? "-top-2 right-4 size-36" : "-right-1 -bottom-8 size-24"}`}
                                           >
                                                 <Photo
                                                       url={overview.data!.recipesPossible.previewImageUrls[n]}
@@ -141,10 +125,10 @@ export default function PantryPage() {
                                     ))}
                                     <span className="relative flex max-w-[58%] flex-col items-start">
                                           <span className="text-sm font-bold text-ink">{overview.data.recipesPossible.count > 0 ? "Con lo que tienes salen" : "Con lo que tienes"}</span>
-                                          <span className="mt-0.5 font-display text-section leading-tight font-extrabold text-ink">
+                                          <span className="mt-1 font-display text-[1.6rem] leading-tight font-extrabold text-ink">
                                                 {overview.data.recipesPossible.count > 0 ? `${plural(overview.data.recipesPossible.count, "receta", "recetas")} esta semana` : "busquemos ideas"}
                                           </span>
-                                          <span className={`${buttonBase} ${buttonVariants.dark} mt-3 min-h-10 gap-1.5 px-4 text-sm`}>
+                                          <span className={`${buttonBase} ${buttonVariants.dark} mt-4 min-h-11 gap-1.5 px-5 text-sm`}>
                                                 Ver ideas
                                                 <Icon name="arrowRight" className="size-4 transition-transform group-hover:translate-x-0.5" strokeWidth={2.25} />
                                           </span>
@@ -156,7 +140,7 @@ export default function PantryPage() {
                               <section aria-labelledby="use-soon" className="flex flex-col gap-3">
                                     <div className="flex items-baseline justify-between gap-3">
                                           <h2 id="use-soon" className="text-section font-extrabold text-ink">
-                                                <MarkerText>Úsalos pronto</MarkerText>
+                                                Úsalos pronto
                                           </h2>
                                           <span className="font-display text-title font-extrabold text-primary-strong tabular-nums" aria-label={plural(overview.data.useSoon.length, "ingrediente", "ingredientes")}>
                                                 {overview.data.useSoon.length}
@@ -167,7 +151,7 @@ export default function PantryPage() {
                                                 const look = soonLooks[index % soonLooks.length]!;
                                                 return (
                                                       <li key={item.itemId} className={`flex shrink-0 flex-col items-center gap-2 rounded-card px-2 py-4 text-center shadow-soft ${overview.data!.useSoon.length <= 3 ? "" : "w-[6.75rem]"} ${look.card}`}>
-                                                            <IngredientIcon label={item.label} icon={item.icon} shape="disc" color={look.ink} className="size-14" />
+                                                            <IngredientIcon label={item.label} icon={item.icon} shape="disc" color="text-ink" className="size-14 shadow-soft" />
                                                             <span className="w-full truncate text-sm font-extrabold text-ink">{item.label}</span>
                                                             <span className={`rounded-full px-2.5 py-0.5 text-xs font-extrabold whitespace-nowrap ${look.chip}`}>{expiryLabel(item.expiresOn)}</span>
                                                       </li>
@@ -178,13 +162,29 @@ export default function PantryPage() {
                         )}
 
                         {!empty && (
-                              <Chips
-                                    bleed
-                                    label="Filtrar por lugar"
-                                    value={place}
-                                    onChange={setPlace}
-                                    options={[{ id: "all" as const, label: "Todo" }, ...placeOptions].map((o) => ({ ...o, label: o.label }))}
-                              />
+                              <div className="-mx-5 flex items-center gap-2 pl-5">
+                                    <button
+                                          type="button"
+                                          aria-label={searchOpen ? "Cerrar filtro" : "Filtrar mi despensa"}
+                                          aria-pressed={searchOpen}
+                                          onClick={() => {
+                                                setSearchOpen((v) => !v);
+                                                setSearch("");
+                                          }}
+                                          className={`grid size-11 shrink-0 place-items-center rounded-full shadow-soft transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong ${searchOpen ? "bg-ink text-card" : "bg-card text-ink hover:bg-field"}`}
+                                    >
+                                          <Icon name={searchOpen ? "close" : "search"} className="size-5" />
+                                    </button>
+                                    <div className="min-w-0 flex-1">
+                                          <Chips
+                                                bleed
+                                                label="Filtrar por lugar"
+                                                value={place}
+                                                onChange={setPlace}
+                                                options={[{ id: "all" as const, label: "Todo" }, ...placeOptions].map((o) => ({ ...o, label: o.label }))}
+                                          />
+                                    </div>
+                              </div>
                         )}
 
                         {pantry.isPlaceholderData && items.length === 0 ? (
@@ -221,6 +221,20 @@ export default function PantryPage() {
                               </ul>
                         )}
                         <LoadMore query={pantry} />
+                        {!empty && (
+                              <button
+                                    type="button"
+                                    onClick={() => {
+                                          setAddQuery(undefined);
+                                          setAddOpen(true);
+                                          window.scrollTo({ top: 0, behavior: "smooth" });
+                                    }}
+                                    className="mb-4 flex min-h-14 items-center justify-center gap-2 rounded-full border-2 border-dashed border-primary/40 font-extrabold text-primary-strong transition-colors hover:bg-primary-soft/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong"
+                              >
+                                    <Icon name="plus" className="size-5" strokeWidth={2.5} />
+                                    Añadir ingrediente
+                              </button>
+                        )}
                   </main>
                   )}
 
@@ -236,9 +250,9 @@ function PantryRow({ item, onOpen }: { item: PantryItem; onOpen: () => void }) {
                   <button
                         type="button"
                         onClick={onOpen}
-                        className="flex min-h-16 w-full items-center gap-3 rounded-card bg-card py-2 pr-4 pl-3 text-left shadow-soft hover:bg-field focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong"
+                        className="flex min-h-[4.5rem] w-full items-center gap-3 rounded-[1.75rem] bg-card py-2.5 pr-5 pl-3 text-left shadow-soft transition-colors hover:bg-plate focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong"
                   >
-                        <IngredientIcon label={item.label} icon={item.icon} className="size-12" />
+                        <IngredientIcon label={item.label} icon={item.icon} shape="circle" className="size-12" />
                         <span className="min-w-0 flex-1">
                               <span className="block truncate font-display font-extrabold text-ink">{item.label}</span>
                               <span className="block truncate text-sm font-semibold text-ink-muted">
@@ -247,10 +261,10 @@ function PantryRow({ item, onOpen }: { item: PantryItem; onOpen: () => void }) {
                                           "Toca para decir cuánto te queda"}
                               </span>
                         </span>
-                        <span className="flex w-16 shrink-0 flex-col items-end gap-1">
+                        <span className="flex w-[4.5rem] shrink-0 flex-col items-end gap-1">
                               {item.remainingPct !== null && (
                                     <span className="block h-2 w-full overflow-hidden rounded-full bg-field" role="img" aria-label={`Queda ${item.remainingPct}%`}>
-                                          <span className="block h-full rounded-full bg-[linear-gradient(90deg,var(--color-primary-strong),var(--color-primary))]" style={{ width: `${item.remainingPct}%` }} />
+                                          <span className="bar-fill block h-full rounded-full bg-[linear-gradient(90deg,var(--color-primary-strong),var(--color-primary))]" style={{ width: `${item.remainingPct}%` }} />
                                     </span>
                               )}
                               {item.expiresOn && days! <= USE_SOON_DAYS && (
