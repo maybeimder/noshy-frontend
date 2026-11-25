@@ -24,7 +24,7 @@ type RecipeSectionProps = {
 
 /**
  * One recipe on the list: what it needs, what is already at home, what is left to buy,
- * and the question that takes you to the store with only those.
+ * and the way to the store with only those.
  */
 export default function RecipeSection({ listId, recipe, items, onShop }: RecipeSectionProps) {
       const detail = useRecipe(recipe.recipeId, { servings: recipe.servings });

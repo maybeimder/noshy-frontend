@@ -17,7 +17,7 @@ export const roundButtonClass = (tone: Tone = "card", size: "md" | "lg" = "md") 
 
 type Common = { label: string; tone?: Tone; size?: "md" | "lg"; children: ReactNode; badge?: number };
 
-/** Circular icon button from ref/ headers (back, search, cart, +). Always has an accessible name. */
+/** Circular icon button of the headers (back, search, cart, +). Always has an accessible name. */
 export default function RoundButton({
       label,
       tone,

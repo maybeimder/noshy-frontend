@@ -1,4 +1,4 @@
-// Pictograms for food, drawn on a 24 grid: `d` is stroked, `f` is filled (leaves, pits, drops), as in the design.
+// Pictograms for food, drawn on a 24 grid: `d` is stroked, `f` is filled (leaves, pits, drops).
 type Glyph = { d: string; f?: string };
 
 export const foodGlyphs = {
@@ -85,7 +85,7 @@ export const foodGlyphs = {
 
 export type FoodGlyph = keyof typeof foodGlyphs;
 
-/** Two-stop pastel behind each pictogram, as on the recipe screen of the design. */
+/** Two-stop pastel behind each pictogram. */
 const gradients = {
       butter: ["#fdf0b7", "#fedfbe"],
       blush: ["#ffe2ea", "#fff0e7"],

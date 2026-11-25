@@ -9,7 +9,7 @@ type ScribbleTextProps = {
       color?: keyof typeof colors;
 };
 
-/** Underlines its children with the hand-drawn squiggle (the highlighted word in ref/ titles). */
+/** Underlines its children with the hand-drawn squiggle. */
 export default function ScribbleText({ children, color = "pink" }: ScribbleTextProps) {
       return (
             <span className="relative inline-block whitespace-nowrap">

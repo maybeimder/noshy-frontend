@@ -23,7 +23,7 @@ import { FeedSkeleton, GridSkeleton, MineSkeleton, type FeedShape, type ListShap
 import { useCreators, useFeed, useMyRecipes, useRecipeActions, useRecommendations, useSavedRecipes } from "../hooks/useRecipes";
 import type { MyRecipeStatus } from "../types";
 
-/** Comunidad, or Recetas inside Mi cocina: the gallery (?ver=explorar) and your own book, «Recetario» (no `ver`). */
+/** Comunidad, or Recetas inside Mi cocina: the gallery (?ver=explorar) and the user's own book, «Recetario» (no `ver`). */
 export default function RecipesPage() {
       const [params] = useSearchParams();
       const ver = params.get("ver");

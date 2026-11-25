@@ -1,4 +1,4 @@
-// Tone families from DESIGN.md › Paleta ampliada: a soft surface plus the text colour that reads on it.
+// Tone families: a soft surface plus the text colour that reads on it.
 export const tones = {
       peach: { soft: "bg-peach-soft", ink: "text-peach-ink" },
       rose: { soft: "bg-rose-soft", ink: "text-rose-ink" },

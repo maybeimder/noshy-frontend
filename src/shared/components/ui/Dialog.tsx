@@ -8,7 +8,7 @@ type DialogProps = {
       children: ReactNode;
       /** Action row; the last button is the dominant one. */
       actions?: ReactNode;
-      /** "sheet": slides up from the bottom (ref/Crear lista.png). */
+      /** "sheet": slides up from the bottom. */
       variant?: "center" | "sheet";
       /** Shown before the title (e.g. the mascot avatar). */
       leading?: ReactNode;

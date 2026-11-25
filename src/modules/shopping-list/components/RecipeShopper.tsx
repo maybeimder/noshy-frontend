@@ -31,7 +31,7 @@ function LoadingState() {
 }
 type Pick = { id: string; title: string; imageUrl: string | null };
 
-/** «Comprar para una receta»: pick one, see what you have and what you lack, add what is missing. */
+/** «Comprar para una receta»: pick one, see what there is and what is missing, add the rest. */
 export default function RecipeShopper({ open, onClose, onShop }: { open: boolean; onClose: () => void; onShop: (scope: StoreScope) => void }) {
       const [picked, setPicked] = useState<Pick | null>(null);
       const close = () => {
@@ -120,7 +120,7 @@ function Plan({ recipe, onBack, onDone, onShop }: { recipe: Pick; onBack: () => 
       const { addItems } = useShoppingMutations();
       const [skip, setSkip] = useState<string[]>([]);
 
-      // The recipe only says whether you have something; the pantry says how much.
+      // The recipe only says whether there is some; the pantry says how much.
       const byIngredient = useMemo(() => new Map((pantry.data?.pages ?? []).flatMap((p) => p.data).map((i) => [i.ingredientId, i])), [pantry.data]);
       const rows: Row[] = (detail.data?.ingredients ?? []).map((i) => {
             const item = byIngredient.get(i.ingredientId);

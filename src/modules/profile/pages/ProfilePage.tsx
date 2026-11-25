@@ -14,7 +14,7 @@ import type { FormStep, Insight, Profile } from "@/modules/plans/types";
 
 const focus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong";
 
-/** One icon and tone per preference row, as in the design. */
+/** One icon and tone per preference row. */
 const sectionLook: Record<FormStep, { icon: IconName; tone: Tone }> = {
       goals: { icon: "target", tone: "mint" },
       activity: { icon: "walk", tone: "sky" },

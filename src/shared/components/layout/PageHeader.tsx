@@ -12,7 +12,7 @@ type PageHeaderProps = {
       /** Where "back" goes when there is no history (e.g. a deep link). */
       backTo?: string;
       actions?: ReactNode;
-      /** Hand-drawn underline under the title (ref: "Mi despensa", "Recetas"). */
+      /** Hand-drawn underline under the title. */
       scribble?: "pink" | "orange";
       decoration?: "star" | "sparkle";
 };

@@ -1,4 +1,4 @@
-// Hand-drawn accents from the home reference. Purely decorative: always aria-hidden.
+// Hand-drawn accents. Purely decorative: always aria-hidden.
 type DoodleProps = { className?: string };
 
 const stroke = {

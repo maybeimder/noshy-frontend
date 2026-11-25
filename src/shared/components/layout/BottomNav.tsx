@@ -4,7 +4,7 @@ import { MascotAvatar } from "../ui/MascotBubble";
 
 type Item = { to: string; label: string; icon?: IconName; end?: boolean; match?: (path: string, search: string) => boolean };
 
-// "Mi cocina" covers cooked recipes, the gallery and your book, pantry, shopping list, week and receipts.
+// "Mi cocina" covers cooked recipes, the gallery and the recipe book, pantry, shopping list, week and receipts.
 const isCommunity = (path: string, search: string) => path.startsWith("/creador") || path.startsWith("/recetas") && search.includes("ver=comunidad");
 const items: Item[] = [
       { to: "/", label: "Inicio", icon: "home", end: true },

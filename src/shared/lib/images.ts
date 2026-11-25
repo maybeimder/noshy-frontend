@@ -3,8 +3,8 @@ const MAX_INPUT_BYTES = 20 * 1024 * 1024;
 const MAX_SIDE = 1600;
 
 /**
- * Resizes to at most 1600 px and re-encodes as JPEG so uploads stay small (contract in
- * backend/recommendation.md §1). Throws with a user-facing message.
+ * Resizes to at most 1600 px and re-encodes as JPEG so uploads stay small.
+ * Throws with a user-facing message.
  */
 export async function compressImage(file: File): Promise<Blob> {
       if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {

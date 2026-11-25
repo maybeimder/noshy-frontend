@@ -16,7 +16,7 @@ import { formatDate, plural } from "@/shared/lib/format";
 import { CookedSkeleton, type CookedShape } from "../components/RecipeSkeletons";
 import { useCookedRecipes } from "../hooks/useRecipes";
 
-// Pastel pairs (top, bottom) of the plate rings, in the order of the design.
+// Pastel pairs (top, bottom) of the plate rings, in order.
 const rings = [
       ["rose", "sky"],
       ["mustard", "mint"],
@@ -26,7 +26,7 @@ const rings = [
       ["peach", "mustard"],
 ].map(([from, to]) => ({ "--ring-from": `var(--color-${from}-soft)`, "--ring-to": `var(--color-${to}-soft)` }) as CSSProperties);
 
-/** Your avatar, to Perfil. */
+/** The user's avatar, to Perfil. */
 function HeaderActions() {
       const { user } = useAuth();
       return (

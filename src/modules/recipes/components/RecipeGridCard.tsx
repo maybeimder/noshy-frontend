@@ -14,7 +14,7 @@ type RecipeGridCardProps = {
 
 export const coverBadge = "absolute bottom-3 left-3 inline-flex items-center gap-1 rounded-full bg-card px-3 py-1 text-xs font-extrabold text-ink";
 
-// ref/Recetas.png: vivid cover (photo or illustrated dish) over a white body.
+// Vivid cover (photo or illustrated dish) over a white body.
 export default function RecipeGridCard({ recipe, to = `/recetas/${recipe.id}`, meta, badge }: RecipeGridCardProps) {
       return (
             <Link

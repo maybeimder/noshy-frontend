@@ -289,7 +289,7 @@ export default function ShoppingListPage() {
       );
 }
 
-/** One pictogram per shelf, as in the design's filter row. */
+/** One pictogram per shelf. */
 const filterIcons: Record<string, IconName | undefined> = {
       fridge: "fridge",
       produce: "leaf",

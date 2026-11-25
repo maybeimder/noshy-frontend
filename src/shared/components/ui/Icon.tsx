@@ -1,4 +1,4 @@
-// One stroke style for every icon (DESIGN.md › Navegación: estilo y grosor consistentes).
+// One stroke style and weight for every icon.
 const paths = {
       home: "M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1Z",
       pantry: "M3.5 4h17v14h-17zM12 4v14M9.5 9.5v2.500M14.500 9.5v2.500M6 18v2.500M18 18v2.500",

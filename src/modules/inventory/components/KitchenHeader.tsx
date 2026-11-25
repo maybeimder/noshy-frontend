@@ -29,7 +29,7 @@ type KitchenHeaderProps = {
 
 const focus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong";
 
-// Mi cocina: what you cooked, recipes, the pantry (with the shopping list) and the week, one tab each.
+// Mi cocina: what was cooked, recipes, the pantry (with the shopping list) and the week, one tab each.
 export default function KitchenHeader({ section, pantryTab = "items", meta, actions }: KitchenHeaderProps) {
       const { title, icon } = sections.find((s) => s.id === section)!;
 

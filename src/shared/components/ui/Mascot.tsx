@@ -6,7 +6,7 @@ type MascotProps = {
       alt?: string;
 };
 
-// The Noshy chef bear (ref/noshy.png, white-filled so it reads on any surface).
+// The Noshy chef bear (white-filled so it reads on any surface).
 export default function Mascot({ className = "size-10", alt = "" }: MascotProps) {
       return <img src={mascotUrl} alt={alt} draggable={false} className={`object-contain select-none ${className}`} />;
 }

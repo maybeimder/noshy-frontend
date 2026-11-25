@@ -8,7 +8,7 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
       size?: "md" | "lg";
       loading?: boolean;
       fullWidth?: boolean;
-      /** Label on the left, arrow (or another icon) in a round badge on the right (the refactor's main CTA). */
+      /** Label on the left, arrow (or another icon) in a round badge on the right (main action). */
       arrow?: boolean | IconName;
 };
 

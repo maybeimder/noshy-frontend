@@ -1,6 +1,6 @@
 import Mascot from "./Mascot";
 
-/** "Noshy" + "Chef Companion" in brand wine (DESIGN.md › Actualización desde las referencias). */
+/** "Noshy" + "Chef Companion" in brand wine. */
 export function Wordmark({ size = "lg", align = "center" }: { size?: "md" | "lg"; align?: "center" | "start" }) {
       return (
             <span className={`flex flex-col leading-none text-wine ${align === "center" ? "items-center" : "items-start"}`}>

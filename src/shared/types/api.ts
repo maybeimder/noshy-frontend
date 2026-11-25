@@ -1,4 +1,4 @@
-// Shapes of the Noshy API (contract v0.3), checked against backend/src.
+// Shapes of the Noshy API.
 
 export type Unit = "g" | "kg" | "ml" | "l" | "unit" | "clove" | "tbsp" | "tsp" | "cup" | "pinch" | "toTaste" | "all";
 /** `display` comes ready to show («2 dientes»); `value` is only for editing. */

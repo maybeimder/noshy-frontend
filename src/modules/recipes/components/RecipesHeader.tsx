@@ -3,7 +3,7 @@ import KitchenHeader from "@/modules/inventory/components/KitchenHeader";
 import Icon from "@/shared/components/ui/Icon";
 import RoundButton from "@/shared/components/ui/RoundButton";
 
-/** Recetas, inside Mi cocina: the gallery of ideas, or your own book («Recetario»). */
+/** Recetas, inside Mi cocina: the gallery of ideas, or the user's own book («Recetario»). */
 export default function RecipesHeader({ book }: { book: boolean }) {
       return (
             <KitchenHeader

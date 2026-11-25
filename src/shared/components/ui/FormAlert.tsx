@@ -2,7 +2,7 @@ type FormAlertProps = {
       children: string;
 };
 
-// Form-level error: icon + text, never color alone (DESIGN.md › Accesibilidad).
+// Form-level error: icon + text, never color alone.
 export default function FormAlert({ children }: FormAlertProps) {
       return (
             <div

@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Palette sampled from the refactor screens (Inicio, Mi cocina, Comunidad) — do not add values outside it. */
+/* Palette. Every colour in the app comes from here. */
 @theme {
       /* Brand */
       --color-primary: #ef4c73; /* brand.primary */
@@ -83,7 +83,7 @@
       --font-sans: "Nunito Sans", ui-sans-serif, system-ui, sans-serif;
       --font-display: "Fredoka", "Nunito Sans", ui-sans-serif, sans-serif;
       --font-logo: "Fredoka", "Nunito Sans", ui-sans-serif, sans-serif;
-      /* Cooking mode: step titles read like a cookbook (refactor nov 2026). */
+      /* Cooking mode: step titles read like a cookbook. */
       --font-serif: "Fraunces", ui-serif, Georgia, serif;
 
       --text-page: 2rem; /* 32 / 40 */
@@ -111,7 +111,7 @@
             @apply bg-canvas font-sans text-base text-ink antialiased;
       }
 
-      /* Headings use the geometric display face from the references. */
+      /* Headings use the geometric display face. */
       h1,
       h2,
       h3 {
@@ -127,7 +127,7 @@
       }
 }
 
-/* Visual refactor (nov 2026): gradients built only from the palette tokens above. */
+/* Gradients built only from the palette tokens above. */
 
 /* Primary action: raspberry into coral. */
 @utility bg-brand {
@@ -347,7 +347,7 @@
       }
 }
 
-/* ---------- Motion (nov 2026). One curve for arrivals; every loop and movement stops with reduced motion. ---------- */
+/* ---------- Motion. One curve for arrivals; every loop and movement stops with reduced motion. ---------- */
 
 /* Title highlights are drawn like a felt-tip pass, left to right, once per mount. */
 @keyframes marker-draw {

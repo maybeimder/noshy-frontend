@@ -1,6 +1,6 @@
 import { hash, recipeColorFor } from "@/shared/lib/tones";
 
-// Flat top-down dishes from ref/Recetas.png. Fill colours are the vivid accent tokens (CSS vars).
+// Flat top-down dishes. Fill colours are the vivid accent tokens (CSS vars).
 const c = {
       plate: "var(--color-plate)",
       cream: "var(--color-cream)",

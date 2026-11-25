@@ -2,7 +2,7 @@ import Markdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 // Chef replies come from an LLM: raw HTML is never rendered (react-markdown default) and images are
-// dropped so a reply cannot load external content. Sizes stay inside the DESIGN.md type scale.
+// dropped so a reply cannot load external content. Sizes stay inside the app's type scale.
 const components: Components = {
       h1: ({ children }) => <h3 className="text-title font-bold">{children}</h3>,
       h2: ({ children }) => <h3 className="text-title font-bold">{children}</h3>,

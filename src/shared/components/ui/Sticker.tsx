@@ -10,7 +10,7 @@ type StickerProps = {
 
 const tilts = { [-6]: "-rotate-6", [-3]: "-rotate-3", 0: "", 3: "rotate-3", 6: "rotate-6" } as const;
 
-// "¡Te extrañé!", "Sin camarón": ink outline with a hard offset shadow (DESIGN.md › Formas).
+// "¡Te extrañé!", "Sin camarón": ink outline with a hard offset shadow.
 export default function Sticker({ children, tone = "white", tilt = -3, className = "" }: StickerProps) {
       return (
             <span
