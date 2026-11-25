@@ -11,7 +11,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError, UNAUTHORIZED_EVENT } from "@/shared/lib/axios";
 import { tokenStorage, userCache } from "@/shared/lib/token-storage";
 import { authApi } from "../api/auth.api";
-import type { AuthResponse, User } from "../types";
+import type { AuthResponse, Tokens, User } from "../types";
 
 type AuthStatus = "loading" | "authenticated" | "anonymous";
 
@@ -24,6 +24,8 @@ type AuthContextValue = {
       setUser: (user: User) => void;
       /** Changes some fields of the current user (avatar, verified email, onboarding done). */
       patchUser: (patch: Partial<User>) => void;
+      /** Swaps the tokens of the same session (password changed). */
+      setTokens: (tokens: Tokens) => void;
       logout: () => void;
 };
 
@@ -49,11 +51,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Only a 401 means the token is bad; a 404 or 5xx says nothing about the session.
       const rejected = me.isError && me.error instanceof ApiError && me.error.status === 401;
 
-      const logout = useCallback(() => {
+      const endSession = useCallback(() => {
             tokenStorage.clear();
             setToken(null);
             queryClient.clear();
       }, [queryClient]);
+
+      const logout = useCallback(() => {
+            const refreshToken = tokenStorage.getRefresh();
+            endSession();
+            // Leaving never waits for the network; offline, the token just expires by itself.
+            if (refreshToken) authApi.logout(refreshToken).catch(() => undefined);
+      }, [endSession]);
+
+      const setTokens = useCallback((tokens: Tokens) => {
+            tokenStorage.set(tokens);
+            setToken(tokens.accessToken);
+      }, []);
 
       const startSession = useCallback(
             ({ user, tokens }: AuthResponse) => {
@@ -82,9 +96,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       );
 
       useEffect(() => {
-            window.addEventListener(UNAUTHORIZED_EVENT, logout);
-            return () => window.removeEventListener(UNAUTHORIZED_EVENT, logout);
-      }, [logout]);
+            window.addEventListener(UNAUTHORIZED_EVENT, endSession);
+            return () => window.removeEventListener(UNAUTHORIZED_EVENT, endSession);
+      }, [endSession]);
 
       // Keep the saved copy fresh for the next visit.
       useEffect(() => {
@@ -93,8 +107,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // An invalid stored token (expired, server secret rotated) ends the session.
       useEffect(() => {
-            if (rejected || (me.isError && !me.data)) logout();
-      }, [rejected, me.isError, me.data, logout]);
+            if (rejected || (me.isError && !me.data)) endSession();
+      }, [rejected, me.isError, me.data, endSession]);
 
       const status: AuthStatus =
             token === null || rejected || (me.isError && !me.data)
@@ -104,8 +118,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     : "loading";
 
       const value = useMemo(
-            () => ({ status, user: me.data ?? null, startSession, setUser, patchUser, logout }),
-            [status, me.data, startSession, setUser, patchUser, logout],
+            () => ({ status, user: me.data ?? null, startSession, setUser, patchUser, setTokens, logout }),
+            [status, me.data, startSession, setUser, patchUser, setTokens, logout],
       );
 
       return <AuthContext value={value}>{children}</AuthContext>;

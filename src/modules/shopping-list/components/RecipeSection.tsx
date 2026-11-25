@@ -15,6 +15,7 @@ import type { ShoppingItem, ShoppingList } from "../types";
 export type StoreScope = { title: string; ingredientIds: string[] };
 
 type RecipeSectionProps = {
+      listId: string;
       recipe: ShoppingList["recipes"][number];
       /** Every item on the list by ingredient, unfiltered. */
       items: Map<string, ShoppingItem>;
@@ -25,15 +26,31 @@ type RecipeSectionProps = {
  * One recipe on the list: what it needs, what is already at home, what is left to buy,
  * and the question that takes you to the store with only those.
  */
-export default function RecipeSection({ recipe, items, onShop }: RecipeSectionProps) {
+export default function RecipeSection({ listId, recipe, items, onShop }: RecipeSectionProps) {
       const detail = useRecipe(recipe.recipeId, { servings: recipe.servings });
-      const { addItems } = useShoppingMutations();
+      const { addItems, removeRecipe } = useShoppingMutations();
+      const removeButton = (
+            <>
+                  <Button variant="tertiary" loading={removeRecipe.isPending} onClick={() => removeRecipe.mutate({ listId, recipeId: recipe.recipeId })} className="self-center text-ink-muted!">
+                        <Icon name="trash" className="size-4" />
+                        Quitar esta receta
+                  </Button>
+                  {removeRecipe.error && <p className="text-sm font-semibold text-error">{removeRecipe.error.message}</p>}
+            </>
+      );
       const [open, setOpen] = useState(true);
       const headingId = `recipe-${recipe.recipeId}`;
 
       if (detail.isPending) return <Sk className="h-44 rounded-[1.75rem]" />;
-      // A recipe that no longer loads should not hide the rest of the list.
-      if (detail.isError) return null;
+      // A recipe that no longer loads should not hide the rest of the list, nor stay on it forever.
+      if (detail.isError)
+            return (
+                  <section aria-label={recipe.title} className="flex flex-col gap-1 rounded-[1.75rem] bg-card p-4 shadow-soft">
+                        <p className="font-display font-extrabold text-ink">{recipe.title}</p>
+                        <p className="text-sm text-ink-muted">No pudimos abrir esta receta.</p>
+                        {removeButton}
+                  </section>
+            );
 
       const ingredients = detail.data.ingredients;
       const have = ingredients.filter((i) => i.inPantry);
@@ -138,6 +155,7 @@ export default function RecipeSection({ recipe, items, onShop }: RecipeSectionPr
                                           </Button>
                                     </div>
                               )}
+                              {removeButton}
                         </div>
                   )}
             </section>

@@ -41,7 +41,8 @@ export function useChefThread(threadId: string | null) {
                   const signature = JSON.stringify([threadId, input]);
                   if (pending.current?.signature !== signature) pending.current = { signature, id: newKey() };
                   if (input.type === "text") {
-                        setLive([{ id: "sending", threadId: threadId!, role: "user", createdAt: new Date().toISOString(), blocks: [{ id: "b1", type: "text", text: input.text }] }]);
+                        // Same clientMessageId as the saved message, so the bubble is not mounted again when it arrives.
+                        setLive([{ id: "sending", clientMessageId: pending.current.id, threadId: threadId!, role: "user", createdAt: new Date().toISOString(), blocks: [{ id: "b1", type: "text", text: input.text }] }]);
                   }
                   const change = (id: string, fn: (m: ChefMessage) => ChefMessage) => setLive((list) => list.map((m) => (m.id === id ? fn(m) : m)));
                   await chefApi.send(threadId!, input, pending.current.id, (e) => {

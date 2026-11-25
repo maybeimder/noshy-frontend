@@ -2,19 +2,18 @@ import { Link } from "react-router-dom";
 import DishCover from "@/shared/components/ui/DishArt";
 import Icon from "@/shared/components/ui/Icon";
 import Photo from "@/shared/components/ui/Photo";
-import { formatTime } from "@/shared/lib/format";
+import { formatKcal, formatTime } from "@/shared/lib/format";
 import type { RecipeCard } from "@/shared/types/api";
-import { useRecipeActions, useSyncSaved } from "../hooks/useRecipes";
+import { useRecipeActions } from "../hooks/useRecipes";
 
 type ExploreCardProps = { recipe: RecipeCard; featured?: boolean };
 
 // A recipe from the backend catalog as a photo card: pantry match on top, save in reach, title on a dark foot.
 export default function ExploreCard({ recipe, featured = false }: ExploreCardProps) {
       const { save } = useRecipeActions();
-      useSyncSaved(recipe.id, recipe.isSaved);
       const { have, total } = recipe.pantryMatch;
       const complete = total > 0 && have === total;
-      const meta = [formatTime(recipe.totalTimeMinutes), `${recipe.nutritionEstimated ? "≈ " : ""}${recipe.nutritionPerServing.kcal} kcal`].filter(Boolean).join(" · ");
+      const meta = [formatTime(recipe.totalTimeMinutes), formatKcal(recipe)].filter(Boolean).join(" · ");
 
       return (
             <article className={`relative isolate overflow-hidden rounded-card bg-plum text-card shadow-[0_18px_36px_-24px_rgb(43_20_51/0.8)] ${featured ? "aspect-[4/3]" : "aspect-[4/5]"}`}>
@@ -45,7 +44,7 @@ export default function ExploreCard({ recipe, featured = false }: ExploreCardPro
 
                   {/* Library recipes are not matched with the pantry: say where they come from instead of «0/8». */}
                   {recipe.nutritionEstimated ? (
-                        <span className="pointer-events-none absolute top-3 left-3 inline-flex items-center rounded-full bg-plum/60 px-2.5 py-1 text-xs font-extrabold text-card backdrop-blur-md">Recetario</span>
+                        <span className="pointer-events-none absolute top-3 left-3 inline-flex items-center rounded-full bg-plum/60 px-2.5 py-1 text-xs font-extrabold text-card backdrop-blur-md">Biblioteca</span>
                   ) : (
                         total > 0 && (
                               <span

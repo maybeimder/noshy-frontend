@@ -11,6 +11,7 @@ import FormAlert from "@/shared/components/ui/FormAlert";
 import Icon, { type IconName } from "@/shared/components/ui/Icon";
 import IngredientIcon from "@/shared/components/ui/IngredientIcon";
 import Mascot from "@/shared/components/ui/Mascot";
+import QuantityField from "@/shared/components/ui/QuantityField";
 import { ErrorState } from "@/shared/components/ui/QueryState";
 import RoundButton from "@/shared/components/ui/RoundButton";
 import { Sk } from "@/shared/components/ui/Skeleton";
@@ -19,6 +20,7 @@ import { useRememberShape } from "@/shared/hooks/useShape";
 import { newKey } from "@/shared/lib/axios";
 import { formatDate, formatMoney, dayToDate, plural } from "@/shared/lib/format";
 import { shareText } from "@/shared/lib/share";
+import { formatAmount, parseAmount, unitChoicesFor } from "@/shared/lib/units";
 import RecipeSection, { type StoreScope } from "../components/RecipeSection";
 import RecipeShopper from "../components/RecipeShopper";
 import ShoppingSkeleton, { type ShoppingShape } from "../components/ShoppingSkeleton";
@@ -92,7 +94,7 @@ export default function ShoppingListPage() {
       if (list.isPending || nudge.isPending) {
             return (
                   <>
-                        <KitchenHeader title="Lista de compras" meta={null} actions={headerRoom} />
+                        <KitchenHeader section="pantry" pantryTab="shopping" meta={null} actions={headerRoom} />
                         <ShoppingSkeleton />
                   </>
             );
@@ -115,7 +117,7 @@ export default function ShoppingListPage() {
       if (!list.data) {
             return (
                   <>
-                        <KitchenHeader title="Lista de compras" meta="Esta semana" actions={<span className="size-12" />} />
+                        <KitchenHeader section="pantry" pantryTab="shopping" meta="Esta semana" actions={<span className="size-12" />} />
                         <main className="mx-auto flex max-w-xl flex-col gap-5 px-5 pt-3">
                               {doneNotice}
                               <section className="relative overflow-hidden rounded-card bg-peach-glow p-5 pr-36 shadow-soft">
@@ -148,14 +150,15 @@ export default function ShoppingListPage() {
       return (
             <>
                   <KitchenHeader
-                        title="Lista de compras"
+                        section="pantry"
+                        pantryTab="shopping"
                         meta={`${plural(data.recipes.length, "receta", "recetas")} · semana del ${formatDate(dayToDate(data.weekStart).toISOString())}`}
                         actions={
                               <>
                                     <RoundButton label={addOpen ? "Cerrar agregar" : "Agregar a la lista"} onClick={() => setAddOpen((v) => !v)}>
                                           <Icon name={addOpen ? "close" : "plus"} strokeWidth={2.25} />
                                     </RoundButton>
-                                    <RoundButton tone="primary" size="lg" label="Compartir lista" onClick={() => onShare(data)}>
+                                    <RoundButton tone="primary" label="Compartir lista" onClick={() => onShare(data)}>
                                           <Icon name="share" strokeWidth={2.25} />
                                     </RoundButton>
                               </>
@@ -228,7 +231,7 @@ export default function ShoppingListPage() {
                         {!storeMode && (
                               <>
                                     {data.recipes.map((recipe) => (
-                                          <RecipeSection key={recipe.recipeId} recipe={recipe} items={byIngredient} onShop={shopFor} />
+                                          <RecipeSection key={recipe.recipeId} listId={data.id} recipe={recipe} items={byIngredient} onShop={shopFor} />
                                     ))}
                                     {forRecipeButton}
                               </>
@@ -288,7 +291,7 @@ export default function ShoppingListPage() {
 
 /** One pictogram per shelf, as in the design's filter row. */
 const filterIcons: Record<string, IconName | undefined> = {
-      fridge: "pantry",
+      fridge: "fridge",
       produce: "leaf",
       protein: "meat",
       seafood: "fish",
@@ -296,7 +299,7 @@ const filterIcons: Record<string, IconName | undefined> = {
       bakery: "bread",
       staples: "store",
       spices: "sparkle",
-      freezer: "pantry",
+      freezer: "snowflake",
 };
 
 const headerRoom = [0, 1].map((i) => <Sk key={i} className="size-12 rounded-full" />);
@@ -314,6 +317,7 @@ function shapeOf(list: ShoppingList | null, nudge: boolean): ShoppingShape {
 
 function ItemRow({ listId, item, storeMode }: { listId: string; item: ShoppingItem; storeMode: boolean }) {
       const { patch, swap } = useShoppingMutations();
+      const [editing, setEditing] = useState(false);
       const [priceOpen, setPriceOpen] = useState(false);
       const [price, setPrice] = useState("");
       // The check shows at once; the item and totals come back with the response.
@@ -346,13 +350,17 @@ function ItemRow({ listId, item, storeMode }: { listId: string; item: ShoppingIt
                                     {item.product?.brand && <span className="block truncate text-xs font-semibold text-ink-muted">{item.product.brand}</span>}
                               </span>
                         </label>
-                        <span
-                              className={`shrink-0 rounded-full border-2 px-3 py-1 text-sm tabular-nums transition-colors ${
-                                    checked ? "border-primary/60 bg-card font-extrabold text-ink" : "border-transparent bg-field font-semibold text-ink-muted"
+                        <button
+                              type="button"
+                              aria-expanded={editing}
+                              aria-label={`${item.quantity.display} de ${item.label}. Cambiar cantidad o quitar`}
+                              onClick={() => setEditing((v) => !v)}
+                              className={`relative shrink-0 rounded-full border-2 px-3 py-1 text-sm tabular-nums transition-colors after:absolute after:-inset-2 hover:border-primary/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong ${
+                                    checked || editing ? "border-primary/60 bg-card font-extrabold text-ink" : "border-transparent bg-field font-semibold text-ink-muted"
                               }`}
                         >
                               {item.quantity.display}
-                        </span>
+                        </button>
                   </div>
                   <div className="-mt-1 pl-[5.25rem]">
                         <button
@@ -372,6 +380,8 @@ function ItemRow({ listId, item, storeMode }: { listId: string; item: ShoppingIt
                               <Icon name="edit" className="size-3" />
                         </button>
                   </div>
+
+                  {editing && <ItemEditor listId={listId} item={item} onClose={() => setEditing(false)} />}
 
                   {priceOpen && (
                         <form
@@ -411,6 +421,38 @@ function ItemRow({ listId, item, storeMode }: { listId: string; item: ShoppingIt
                   )}
                   {error && <p className="text-sm font-semibold text-error">{error.message}</p>}
             </li>
+      );
+}
+
+/** How much to buy of one item, or take it off the list. */
+function ItemEditor({ listId, item, onClose }: { listId: string; item: ShoppingItem; onClose: () => void }) {
+      const { patch, removeItem } = useShoppingMutations();
+      const measured = item.quantity.value !== null && item.quantity.unit !== "toTaste" && item.quantity.unit !== "all" ? { value: item.quantity.value, unit: item.quantity.unit } : null;
+      const choices = unitChoicesFor(item.label, item.icon, measured?.unit ?? "unit");
+      const [unit, setUnit] = useState(measured?.unit ?? choices.suggested[0]!);
+      const [amount, setAmount] = useState(measured ? formatAmount(measured.value) : "");
+      const value = parseAmount(amount);
+      const error = patch.error ?? removeItem.error;
+      return (
+            <form
+                  className="cook-fade flex flex-col gap-2"
+                  onSubmit={(e) => {
+                        e.preventDefault();
+                        if (value !== null) patch.mutate({ listId, itemId: item.id, patch: { quantity: { value, unit } } }, { onSuccess: onClose });
+                  }}
+            >
+                  <QuantityField label={item.label} choices={choices} unit={unit} onUnit={setUnit} amount={amount} onAmount={setAmount} />
+                  <div className="grid grid-cols-2 gap-2">
+                        <Button variant="soft" loading={removeItem.isPending} onClick={() => removeItem.mutate({ listId, itemId: item.id })}>
+                              <Icon name="trash" className="size-4" />
+                              Quitar
+                        </Button>
+                        <Button type="submit" loading={patch.isPending} disabled={value === null}>
+                              Guardar
+                        </Button>
+                  </div>
+                  {error && <p className="text-sm font-semibold text-error">{error.message}</p>}
+            </form>
       );
 }
 

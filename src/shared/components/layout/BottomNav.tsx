@@ -4,18 +4,19 @@ import { MascotAvatar } from "../ui/MascotBubble";
 
 type Item = { to: string; label: string; icon?: IconName; end?: boolean; match?: (path: string, search: string) => boolean };
 
-// "Mi cocina" covers pantry, shopping list, week, cooked recipes and receipts; "Comunidad" is the community tab of recipes.
+// "Mi cocina" covers cooked recipes, the gallery and your book, pantry, shopping list, week and receipts.
+const isCommunity = (path: string, search: string) => path.startsWith("/creador") || path.startsWith("/recetas") && search.includes("ver=comunidad");
 const items: Item[] = [
       { to: "/", label: "Inicio", icon: "home", end: true },
-      { to: "/cocinadas", label: "Mi cocina", icon: "kitchen", match: (path) => ["/despensa", "/compras", "/semana", "/cocinadas", "/facturas"].some((p) => path.startsWith(p)) },
+      { to: "/cocinadas", label: "Mi cocina", icon: "kitchen", match: (path, search) => ["/despensa", "/compras", "/semana", "/cocinadas", "/facturas", "/recetas"].some((p) => path.startsWith(p)) && !isCommunity(path, search) },
       { to: "/chef", label: "Tu chef" },
       {
             to: "/recetas?ver=comunidad",
             label: "Comunidad",
             icon: "community",
-            match: (path, search) => path.startsWith("/recetas") && search.includes("ver=comunidad"),
+            match: isCommunity,
       },
-      { to: "/perfil", label: "Perfil", icon: "user" },
+      { to: "/perfil", label: "Perfil", icon: "user", match: (path) => ["/perfil", "/historial", "/ajustes"].some((p) => path.startsWith(p)) },
 ];
 
 const linkFocus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong";
@@ -38,9 +39,9 @@ export default function BottomNav() {
                                                 <Link
                                                       to={to}
                                                       aria-label={label}
-                                                      className={`-mt-9 grid size-[4.5rem] place-items-center rounded-full bg-brand p-1 shadow-brand ring-4 ring-canvas transition-transform hover:scale-105 ${linkFocus}`}
+                                                      className={`-mt-9 grid size-[4.5rem] place-items-center rounded-full bg-brand p-[5px] shadow-brand transition-transform hover:scale-105 ${linkFocus}`}
                                                 >
-                                                      <MascotAvatar tone="white" className="size-full" />
+                                                      <MascotAvatar tone="blush" className="size-full" />
                                                 </Link>
                                           </li>
                                     );

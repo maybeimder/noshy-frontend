@@ -1,16 +1,17 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { Link } from "react-router-dom";
 
-type Tone = "card" | "primary" | "field";
+type Tone = "card" | "primary" | "field" | "blush";
 
 const toneClass: Record<Tone, string> = {
       card: "bg-card text-ink shadow-[0_6px_16px_-10px_rgb(43_20_51/0.45)] hover:bg-field",
-      primary: "bg-primary-strong text-card shadow-[0_8px_18px_-8px_rgb(201_48_124/0.7)] hover:bg-primary-strong/90",
+      primary: "bg-brand text-card shadow-brand hover:brightness-105",
       field: "bg-field text-ink hover:bg-line",
+      blush: "bg-blush text-ink shadow-[0_6px_16px_-8px_rgb(223_32_106/0.22)] hover:brightness-[0.98]",
 };
 
 export const roundButtonClass = (tone: Tone = "card", size: "md" | "lg" = "md") =>
-      `relative grid shrink-0 place-items-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong ${
+      `relative grid shrink-0 place-items-center rounded-full transition-[background-color,filter] disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong ${
             size === "lg" ? "size-14" : "size-12"
       } ${toneClass[tone]}`;
 

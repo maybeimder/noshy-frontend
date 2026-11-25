@@ -5,9 +5,10 @@ import MenuWaiting from "@/modules/menus/components/MenuWaiting";
 import PantrySetup from "@/modules/inventory/components/PantrySetup";
 import { ErrorState } from "@/shared/components/ui/QueryState";
 import { newKey } from "@/shared/lib/axios";
+import { useUserValue } from "@/shared/lib/user-store";
 import PlanDone from "../components/PlanDone";
 import PlanSkeleton from "../components/PlanSkeleton";
-import PlanForm from "../components/PlanForm";
+import PlanForm, { type PlanDraft } from "../components/PlanForm";
 import { useCompleteOnboarding, useProfile, useUpdatePreferences } from "../hooks/usePlan";
 import type { PlanData, FormStep, PlanInput } from "../types";
 import { useOnboardingSkipped } from "../utils/onboarding";
@@ -33,6 +34,7 @@ export default function PlanPage({ mode }: PlanPageProps) {
       const onboarding = mode === "onboarding";
       // From a profile row: /plan/editar?paso=kitchen
       const startStep = Math.max(0, sections.indexOf(params.get("paso") as FormStep));
+      const [draft, setDraft] = useUserValue<PlanDraft>(user?.id ?? "anon", "onboardingDraft");
       const [stage, setStage] = useState<Stage>("form");
       const [step, setStep] = useState(startStep);
       const [created, setCreated] = useState<(PlanData & { menuId: string }) | null>(null);
@@ -61,6 +63,7 @@ export default function PlanPage({ mode }: PlanPageProps) {
                   { input, key: submission.current.key },
                   {
                         onSuccess: (result) => {
+                              setDraft(null);
                               setCreated({ ...result, menuId: result.firstMenu.menuId });
                               setStage("pantry");
                         },
@@ -100,6 +103,8 @@ export default function PlanPage({ mode }: PlanPageProps) {
                         key={`${stage}-${step}`}
                         initial={created ?? profile.data}
                         initialStep={step}
+                        draft={onboarding && !created && !profile.data ? draft : null}
+                        onDraft={onboarding && !created && !profile.data ? setDraft : undefined}
                         submitLabel={onboarding && !created ? "Crear mi chef" : "Guardar cambios"}
                         submitting={complete.isPending || save.isPending}
                         error={error ? (Object.values("fieldErrors" in error ? (error.fieldErrors as Record<string, string>) : {})[0] ?? error.message) : null}

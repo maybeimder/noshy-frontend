@@ -1,31 +1,37 @@
 import Icon, { type IconName } from "@/shared/components/ui/Icon";
 import type { MealSlot, MealSlotId } from "@/shared/types/api";
 
-const icons: Record<MealSlotId, IconName> = { breakfast: "bowl", snack1: "sparkle", lunch: "kitchen", snack2: "sparkle", dinner: "flame" };
+const icons: Record<MealSlotId, IconName> = { breakfast: "coffee", snack1: "sparkle", lunch: "soup", snack2: "sparkle", dinner: "moon" };
 const statusText = (meal: MealSlot) =>
       meal.status === "logged" ? `${meal.kcal ?? 0} kcal` : meal.status === "skipped" ? "Saltada" : meal.status === "current" ? "Ahora" : "Pendiente";
 
-// Meal slots as the backend builds them; tapping one logs a meal.
+// Logged meals sink into the panel, the current one stands out, the rest are outlined.
+const tones: Record<MealSlot["status"], { tile: string; icon: string; text: string }> = {
+      logged: { tile: "bg-canvas text-ink", icon: "bg-protein-soft text-protein", text: "text-protein-ink" },
+      current: { tile: "bg-plum-glow text-card shadow-[0_10px_18px_-8px_rgb(46_19_45/0.5)]", icon: "bg-brand text-card", text: "text-marker" },
+      pending: { tile: "border border-line bg-card text-ink", icon: "bg-canvas text-ink-muted", text: "text-ink-muted" },
+      skipped: { tile: "border border-line bg-card text-ink", icon: "bg-canvas text-ink-muted", text: "text-ink-muted" },
+};
+
+// Meal slots as the backend builds them; tapping one logs a meal. Up to four share the row, more of them scroll.
 export default function MealsRow({ meals, onPick }: { meals: MealSlot[]; onPick: (slot: MealSlot) => void }) {
       return (
-            <ul aria-label="Comidas de hoy" className="scrollbar-none flex gap-2 overflow-x-auto px-5 py-1">
+            <ul aria-label="Comidas de hoy" className="scrollbar-none flex gap-1.5 overflow-x-auto px-5 pt-1 pb-6">
                   {meals.map((meal) => {
-                        const now = meal.status === "current";
+                        const tone = tones[meal.status];
                         return (
-                              <li key={meal.slot} className="shrink-0">
+                              <li key={meal.slot} className="min-w-[4.6rem] flex-1">
                                     <button
                                           type="button"
                                           onClick={() => onPick(meal)}
                                           aria-label={`${meal.label}, ${statusText(meal)}: registrar`}
-                                          className={`flex w-[5.5rem] flex-col items-start rounded-control p-3 text-left shadow-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong ${
-                                                now ? "bg-plum-glow text-card" : "bg-card text-ink"
-                                          }`}
+                                          className={`flex h-[5.375rem] w-full flex-col items-center justify-center rounded-[1.25rem] px-1 text-center transition-[scale] active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong ${tone.tile}`}
                                     >
-                                          <span className={`grid size-8 place-items-center rounded-full ${now ? "bg-primary-strong text-card" : meal.status === "logged" ? "bg-mint-soft text-mint-ink" : "bg-field text-ink"}`}>
+                                          <span className={`grid size-8 place-items-center rounded-full ${tone.icon}`}>
                                                 <Icon name={meal.status === "logged" ? "check" : icons[meal.slot]} className="size-4" strokeWidth={2} />
                                           </span>
-                                          <span className="mt-2 block font-display text-sm font-extrabold">{meal.label}</span>
-                                          <span className={`block text-xs font-semibold ${now ? "text-secondary-soft" : "text-ink-muted"}`}>{statusText(meal)}</span>
+                                          <span className="mt-1 block max-w-full truncate font-display text-[0.8125rem] leading-[1.125rem] font-medium">{meal.label}</span>
+                                          <span className={`block text-[0.6875rem] leading-4 font-bold ${tone.text}`}>{statusText(meal)}</span>
                                     </button>
                               </li>
                         );

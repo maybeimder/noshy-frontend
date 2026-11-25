@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Squiggle } from "./Doodles";
+import Icon, { type IconName } from "./Icon";
 
 const colors = { pink: "text-primary-strong", orange: "text-secondary" };
 
@@ -18,13 +19,22 @@ export default function ScribbleText({ children, color = "pink" }: ScribbleTextP
       );
 }
 
+/** The icon before a title, sized by it. */
+export function TitleIcon({ name }: { name: IconName }) {
+      return (
+            <span aria-hidden className="shrink-0 text-primary-strong">
+                  <Icon name={name} className="size-[0.95em]" strokeWidth={2.1} />
+            </span>
+      );
+}
+
 /**
- * Felt-tip highlight across the lower half of a title (refactor: «¿Qué quieres lograr?»).
- * The stroke wraps with the text, so long titles stay legible on narrow screens.
+ * Flat highlight across the lower half of a title. The stroke wraps with the text, so long titles
+ * stay legible on narrow screens.
  */
 export function MarkerText({ children }: { children: ReactNode }) {
       return (
-            <span className="marker-draw [box-decoration-break:clone] bg-[linear-gradient(176deg,transparent_52%,color-mix(in_srgb,var(--color-primary)_42%,transparent)_54%,color-mix(in_srgb,var(--color-primary)_42%,transparent)_88%,transparent_90%)] px-1 [-webkit-box-decoration-break:clone]">
+            <span className="marker-draw font-semibold [box-decoration-break:clone] bg-[linear-gradient(180deg,transparent_54%,var(--color-marker)_54%,var(--color-marker)_88%,transparent_88%)] px-1.5 [-webkit-box-decoration-break:clone]">
                   {children}
             </span>
       );

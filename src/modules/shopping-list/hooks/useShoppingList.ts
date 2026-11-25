@@ -32,6 +32,8 @@ export function useShoppingMutations() {
             swap: useMutation({ mutationFn: shoppingListApi.swap, onSuccess: writeBack, onError: () => void invalidate() }),
             addItems: useMutation({ mutationFn: shoppingListApi.addItems, onSuccess: () => Promise.all([invalidate(), queryClient.invalidateQueries({ queryKey: ["recipe"] })]) }),
             addRecipe: useMutation({ mutationFn: shoppingListApi.addRecipe, onSuccess: () => Promise.all([invalidate(), queryClient.invalidateQueries({ queryKey: ["recipe"] })]) }),
+            removeItem: useMutation({ mutationFn: shoppingListApi.removeItem, onSuccess: () => Promise.all([invalidate(), queryClient.invalidateQueries({ queryKey: ["recipe"] })]) }),
+            removeRecipe: useMutation({ mutationFn: shoppingListApi.removeRecipe, onSuccess: () => Promise.all([invalidate(), queryClient.invalidateQueries({ queryKey: ["recipe"] })]) }),
             share: useMutation({ mutationFn: shoppingListApi.share }),
             checkout: useMutation({ mutationFn: shoppingListApi.checkout, onSuccess: () => invalidatePantry() }),
       };

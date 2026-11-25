@@ -1,94 +1,37 @@
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import PageHeader from "@/shared/components/layout/PageHeader";
 import Avatar from "@/shared/components/ui/Avatar";
 import { buttonBase, buttonVariants } from "@/shared/components/ui/Button";
 import Chips from "@/shared/components/ui/Chips";
-import DishCover from "@/shared/components/ui/DishArt";
 import Icon, { type IconName } from "@/shared/components/ui/Icon";
 import LoadMore from "@/shared/components/ui/LoadMore";
 import Mascot from "@/shared/components/ui/Mascot";
 import { MascotAvatar } from "@/shared/components/ui/MascotBubble";
-import { MarkerText } from "@/shared/components/ui/ScribbleText";
-import Photo from "@/shared/components/ui/Photo";
+import { MarkerText, TitleIcon } from "@/shared/components/ui/ScribbleText";
 import { EmptyState, ErrorState } from "@/shared/components/ui/QueryState";
-import RoundButton from "@/shared/components/ui/RoundButton";
+import { useDebounced } from "@/shared/hooks/useDebounced";
 import { useRememberShape } from "@/shared/hooks/useShape";
-import { formatTime } from "@/shared/lib/format";
 import type { MealSlotId, RecipeCard, RecommendationFilters } from "@/shared/types/api";
-import CommentsDialog from "../components/CommentsDialog";
+import CommunityHeader from "../components/CommunityHeader";
 import ExploreCard from "../components/ExploreCard";
+import FeedCard from "../components/FeedCard";
+import MyRecipeSheet from "../components/MyRecipeSheet";
 import RecipeGridCard, { coverBadge } from "../components/RecipeGridCard";
+import RecipeSearch from "../components/RecipeSearch";
+import RecipesHeader from "../components/RecipesHeader";
 import { FeedSkeleton, GridSkeleton, MineSkeleton, type FeedShape, type ListShape } from "../components/RecipeSkeletons";
 import { useCreators, useFeed, useMyRecipes, useRecipeActions, useRecommendations, useSavedRecipes } from "../hooks/useRecipes";
-import type { FeedItem, MyRecipeStatus } from "../types";
+import type { MyRecipeStatus } from "../types";
 
-const tabs = [
-      { id: "mias", label: "Mis recetas" },
-      { id: "comunidad", label: "Comunidad" },
-      { id: "explorar", label: "Explorar" },
-] as const;
-type Tab = (typeof tabs)[number]["id"];
-
+/** Comunidad, or Recetas inside Mi cocina: the gallery (?ver=explorar) and your own book, «Recetario» (no `ver`). */
 export default function RecipesPage() {
-      const [params, setParams] = useSearchParams();
+      const [params] = useSearchParams();
       const ver = params.get("ver");
-      const tab: Tab = ver === "comunidad" || ver === "explorar" ? ver : "mias";
 
       return (
             <>
-                  {tab === "comunidad" ? (
-                        <header className="mx-auto flex max-w-xl items-center gap-3 px-5 pt-6 pb-2">
-                              <div className="min-w-0 flex-1">
-                                    <h1 className="text-[1.75rem] leading-tight font-extrabold text-ink">
-                                          <MarkerText>Comunidad</MarkerText>
-                                    </h1>
-                                    <p className="mt-1 text-sm font-semibold text-ink-muted">Recetas de gente real</p>
-                              </div>
-                              <RoundButton to="/recetas/nueva" label="Nueva receta" tone="primary">
-                                    <Icon name="plus" strokeWidth={2.25} />
-                              </RoundButton>
-                        </header>
-                  ) : (
-                        <PageHeader
-                              title="Recetas"
-                              scribble="orange"
-                              decoration="star"
-                              actions={
-                                    <>
-                                          <RoundButton to="/compras" label="Lista de compras">
-                                                <Icon name="cart" />
-                                          </RoundButton>
-                                          <RoundButton to="/recetas/nueva" label="Nueva receta" tone="primary">
-                                                <Icon name="plus" strokeWidth={2.25} />
-                                          </RoundButton>
-                                    </>
-                              }
-                        />
-                  )}
-                  <main className="mx-auto flex max-w-xl flex-col gap-4 px-5 pt-3">
-                        <div role="tablist" aria-label="Tipo de recetas" className="grid grid-cols-3 gap-1 rounded-full bg-card p-1 shadow-soft">
-                              {tabs.map(({ id, label }) => (
-                                    <button
-                                          key={id}
-                                          type="button"
-                                          role="tab"
-                                          id={`tab-${id}`}
-                                          aria-selected={tab === id}
-                                          aria-controls="recipes-panel"
-                                          onClick={() => setParams(id === "mias" ? {} : { ver: id }, { replace: true })}
-                                          className={`min-h-10 rounded-full text-sm font-extrabold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong ${
-                                                tab === id ? "bg-brand text-card" : "text-ink-muted hover:text-ink"
-                                          }`}
-                                    >
-                                          {label}
-                                    </button>
-                              ))}
-                        </div>
-                        <section id="recipes-panel" role="tabpanel" aria-labelledby={`tab-${tab}`} className="flex flex-col gap-4">
-                              {tab === "mias" ? <Mine /> : tab === "comunidad" ? <Community /> : <Explore />}
-                        </section>
-                  </main>
+                  {ver === "comunidad" ? <CommunityHeader /> : <RecipesHeader book={ver !== "explorar"} />}
+                  <main className="mx-auto flex max-w-xl flex-col gap-4 px-5 pt-2">{ver === "comunidad" ? <Community /> : ver === "explorar" ? <Explore /> : <Mine />}</main>
             </>
       );
 }
@@ -103,19 +46,20 @@ const statuses: Record<MyRecipeStatus, { label: string; icon: IconName }> = {
 function Mine() {
       const mine = useMyRecipes();
       const saved = useSavedRecipes();
+      const [openId, setOpenId] = useState<string | null>(null);
       useRememberShape<ListShape>("mine", mine.data ? { count: Math.min(8, mine.data.pages[0]!.data.length) } : null);
       if (mine.isPending) return <MineSkeleton />;
       if (mine.isError) return <ErrorState message={mine.error.message} onRetry={() => mine.refetch()} />;
+      const own = mine.data.pages.flatMap((p) => p.data);
+      const opened = own.find((r) => r.id === openId);
       return (
             <>
                   <ul className="grid grid-cols-2 gap-3">
-                        {mine.data.pages
-                              .flatMap((p) => p.data)
-                              .map((recipe) => {
+                        {own.map((recipe) => {
                                     const status = statuses[recipe.status];
                                     const editable = recipe.status === "draft" || recipe.status === "rejected";
                                     return (
-                                          <li key={recipe.id}>
+                                          <li key={recipe.id} className="relative">
                                                 <RecipeGridCard
                                                       recipe={{ ...recipe, imageUrl: recipe.coverImageUrl }}
                                                       to={editable ? `/recetas/${recipe.id}/editar` : `/recetas/${recipe.id}`}
@@ -126,6 +70,14 @@ function Mine() {
                                                             </span>
                                                       }
                                                 />
+                                                <button
+                                                      type="button"
+                                                      aria-label={`Opciones de ${recipe.title || "receta sin nombre"}`}
+                                                      onClick={() => setOpenId(recipe.id)}
+                                                      className="absolute top-2 right-2 grid size-11 place-items-center rounded-full bg-card/90 text-ink shadow-soft backdrop-blur hover:bg-card focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong"
+                                                >
+                                                      <Icon name="dots" className="size-5" strokeWidth={3} />
+                                                </button>
                                           </li>
                                     );
                               })}
@@ -141,16 +93,20 @@ function Mine() {
                         </li>
                   </ul>
                   <LoadMore query={mine} />
+                  {opened && <MyRecipeSheet key={opened.id} recipe={opened} onClose={() => setOpenId(null)} />}
 
                   <section aria-labelledby="saved" className="mt-2 flex flex-col gap-3">
                         <div className="flex items-baseline justify-between gap-3">
-                              <h2 id="saved" className="text-section font-extrabold text-ink">
+                              <h2 id="saved" className="flex items-center gap-2 text-section text-ink">
+                                    <TitleIcon name="bookmark" />
                                     <MarkerText>Guardadas</MarkerText>
                               </h2>
-                              {saved.recipes.length > 0 && <span className="text-sm font-bold text-ink-muted">{saved.recipes.length}</span>}
+                              {saved.recipes.length > 0 && <span className="text-sm font-bold text-ink-muted">{saved.query.hasNextPage ? `${saved.recipes.length}+` : saved.recipes.length}</span>}
                         </div>
-                        {saved.pending && saved.recipes.length === 0 ? (
+                        {saved.pending ? (
                               <GridSkeleton name="saved" />
+                        ) : saved.query.isError ? (
+                              <ErrorState message={saved.query.error.message} onRetry={() => saved.query.refetch()} />
                         ) : saved.recipes.length === 0 ? (
                               <p className="flex items-start gap-3 rounded-card bg-card p-4 text-sm text-ink-muted shadow-soft">
                                     <Icon name="bookmark" className="size-5 shrink-0 text-primary-strong" />
@@ -165,6 +121,7 @@ function Mine() {
                                     ))}
                               </ul>
                         )}
+                        <LoadMore query={saved.query} />
                   </section>
             </>
       );
@@ -181,7 +138,9 @@ function Explore() {
       const slot = slots.find((s) => s === params.get("franja"));
       const using = params.get("con")?.split(",").filter(Boolean);
       const max = Number(params.get("max")) || undefined;
-      const filters: RecommendationFilters = { source, slot, usingIngredientIds: using, maxMinutes: max };
+      const [search, setSearch] = useState("");
+      const q = useDebounced(search.trim()) || undefined;
+      const filters: RecommendationFilters = { source, slot, usingIngredientIds: using, maxMinutes: max, q };
       const ideas = useRecommendations(filters);
       const set = (changes: Record<string, string | null>) => {
             const next = new URLSearchParams(params);
@@ -191,7 +150,7 @@ function Explore() {
       const list = (ideas.data?.pages ?? []).flatMap((p) => p.data);
       const meta = ideas.data?.pages[0]?.meta;
       const filling = meta?.library?.status === "filling";
-      useRememberShape<ListShape>("explore", ideas.data ? { count: Math.min(8, list.length) } : null);
+      useRememberShape<ListShape>("explore", ideas.data && !q ? { count: Math.min(8, list.length) } : null);
 
       return (
             <>
@@ -208,6 +167,7 @@ function Explore() {
                               <Icon name="arrowRight" className="size-5" strokeWidth={2.25} />
                         </span>
                   </Link>
+                  <RecipeSearch label="Buscar recetas" placeholder="Busca por nombre o ingrediente" value={search} onChange={setSearch} />
                   <Chips
                         bleed
                         label="De dónde salen las ideas"
@@ -215,7 +175,7 @@ function Explore() {
                         onChange={(id) => set({ fuente: id === "forYou" ? null : id })}
                         options={[
                               { id: "forYou", label: "Para ti" },
-                              { id: "library", label: "Recetario" },
+                              { id: "library", label: "Biblioteca" },
                               { id: "pantry", label: "Con mi despensa" },
                         ]}
                   />
@@ -244,10 +204,21 @@ function Explore() {
                         <GridSkeleton name="explore" />
                   ) : ideas.isError ? (
                         <ErrorState message={ideas.error.message} onRetry={() => ideas.refetch()} />
+                  ) : list.length === 0 && q ? (
+                        <EmptyState
+                              icon="search"
+                              title={`Nada con «${q}»`}
+                              description="Prueba con otra palabra, o pídesela a tu chef."
+                              action={
+                                    <Link to={`/chef?mensaje=${encodeURIComponent(`Quiero una receta de ${q}`)}`} className={`${buttonBase} ${buttonVariants.primary} min-h-11 text-sm`}>
+                                          Pedírsela a mi chef
+                                    </Link>
+                              }
+                        />
                   ) : list.length === 0 && source === "library" ? (
                         <EmptyState
                               icon="search"
-                              title={filling ? "Preparando tu recetario" : "Tu recetario está vacío por ahora"}
+                              title={filling ? "Preparando tu biblioteca" : "La biblioteca está vacía por ahora"}
                               description={filling ? "Estamos buscando recetas que puedas comer. Aparecen aquí solas." : max ? "Prueba con más tiempo." : "No pudimos traer recetas en este momento. Vuelve en un rato o pídele una a tu chef."}
                         />
                   ) : list.length === 0 ? (
@@ -256,7 +227,7 @@ function Explore() {
                         <>
                               <p className="text-sm font-semibold text-ink-muted">
                                     {meta?.total ?? list.length} {(meta?.total ?? list.length) === 1 ? "receta" : "recetas"}
-                                    {source === "pantry" ? " con lo que tienes" : source === "library" ? " del recetario" : " para ti"}
+                                    {source === "pantry" ? " con lo que tienes" : source === "library" ? " de la biblioteca" : " para ti"}
                                     {filling && <span role="status"> · trayendo más…</span>}
                               </p>
                               <ul className="grid grid-cols-2 gap-3">
@@ -276,44 +247,56 @@ function Explore() {
 
 function Community() {
       const [filter, setFilter] = useState("trending");
-      const feed = useFeed(filter);
+      const [search, setSearch] = useState("");
+      const q = useDebounced(search.trim()) || undefined;
+      const feed = useFeed(filter, { q });
       const creators = useCreators();
       const { follow } = useRecipeActions();
       const items = (feed.data?.pages ?? []).flatMap((p) => p.data);
       const filters = feed.data?.pages[0]?.meta.filters ?? [];
       const loading = feed.isPending || creators.isPending;
-      useRememberShape<FeedShape>("feed", !loading && feed.data && filter === "trending" ? { count: Math.min(3, items.length), creators: Boolean(creators.data?.length) } : null);
+      useRememberShape<FeedShape>("feed", !loading && feed.data && filter === "trending" && !q ? { count: Math.min(3, items.length), creators: Boolean(creators.data?.length) } : null);
       if (loading) return <FeedSkeleton />;
 
       return (
             <>
                   {creators.data && creators.data.length > 0 && (
-                        <ul aria-label="Creadores que sigues" className="scrollbar-none -mx-5 flex gap-4 overflow-x-auto px-5 py-1">
+                        <ul aria-label="Creadores" className="scrollbar-none -mx-5 flex gap-3 overflow-x-auto px-5 py-1">
                               {creators.data.map((creator) => (
-                                    <li key={creator.id} className="flex w-[4.5rem] shrink-0 flex-col items-center gap-1.5 text-center">
-                                          <button
-                                                type="button"
-                                                aria-pressed={creator.following}
-                                                aria-label={`${creator.firstName}${creator.hasNewContent ? ", con recetas nuevas" : ""}. ${creator.following ? "Dejar de seguir" : "Seguir"}`}
-                                                disabled={follow.isPending}
-                                                onClick={() => follow.mutate({ id: creator.id, on: !creator.following })}
-                                                className={`relative rounded-full p-[3px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong ${creator.hasNewContent ? "bg-brand" : "bg-line"}`}
-                                          >
-                                                <Avatar name={creator.firstName} url={creator.avatarUrl} size="md" className="border-[3px] border-canvas" />
+                                    <li key={creator.id} className="flex w-16 shrink-0 flex-col items-center gap-1.5 text-center">
+                                          <span className="relative">
+                                                <Link
+                                                      to={`/creador/${creator.id}`}
+                                                      aria-label={`${creator.firstName}${creator.hasNewContent ? ", con recetas nuevas" : ""}`}
+                                                      className="block rounded-full bg-story p-[2.5px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong"
+                                                >
+                                                      <Avatar name={creator.firstName} url={creator.avatarUrl} size="md" className="size-[3.6875rem] border-[2.5px] border-canvas bg-clip-padding" />
+                                                </Link>
                                                 {!creator.following && (
-                                                      <span aria-hidden className="absolute -right-0.5 -bottom-0.5 grid size-6 place-items-center rounded-full border-2 border-canvas bg-primary-strong text-card">
-                                                            <Icon name="plus" className="size-3.5" strokeWidth={3} />
-                                                      </span>
+                                                      <button
+                                                            type="button"
+                                                            aria-label={`Seguir a ${creator.firstName}`}
+                                                            disabled={follow.isPending}
+                                                            onClick={() => follow.mutate({ id: creator.id, on: true })}
+                                                            className="absolute -right-2 -bottom-2 grid size-8 place-items-center rounded-full focus-visible:outline-2 focus-visible:outline-primary-strong"
+                                                      >
+                                                            <span aria-hidden className="grid size-5 place-items-center rounded-full border-2 border-canvas bg-brand text-card">
+                                                                  <Icon name="plus" className="size-3" strokeWidth={3} />
+                                                            </span>
+                                                      </button>
                                                 )}
-                                          </button>
-                                          <span aria-hidden className="w-full truncate text-xs font-bold text-ink">{creator.firstName}</span>
+                                          </span>
+                                          <span aria-hidden className="w-full truncate text-xs font-bold text-ink-muted">{creator.firstName}</span>
                                     </li>
                               ))}
                         </ul>
                   )}
+                  <RecipeSearch label="Buscar en la comunidad" placeholder="Busca una receta o un creador" value={search} onChange={setSearch} />
                   {filters.length > 0 && <Chips bleed label="Filtrar comunidad" value={filter} onChange={setFilter} options={filters.map((f) => (f.id === "trending" ? { ...f, icon: "flame" as const } : f))} />}
                   {feed.isError ? (
                         <ErrorState message={feed.error.message} onRetry={() => feed.refetch()} />
+                  ) : items.length === 0 && q ? (
+                        <EmptyState icon="search" title={`Nada con «${q}»`} description="Prueba con otra palabra o quita los filtros." />
                   ) : items.length === 0 ? (
                         <EmptyState
                               icon="community"
@@ -334,93 +317,5 @@ function Community() {
                   )}
                   <LoadMore query={feed} />
             </>
-      );
-}
-
-function FeedCard({ item }: { item: FeedItem }) {
-      const { like, save } = useRecipeActions();
-      const [commentsOpen, setCommentsOpen] = useState(false);
-      const { recipe, author, viewer, stats, compatibility } = item;
-      const error = like.error ?? save.error;
-      const n = recipe.nutritionPerServing;
-      const time = formatTime(recipe.totalTimeMinutes);
-      const glass = "inline-flex items-center gap-1.5 rounded-full bg-plum/55 px-2.5 py-1 text-xs font-extrabold text-card backdrop-blur-md";
-      const stat =
-            "inline-flex min-h-11 items-center gap-1.5 rounded-full px-2 text-sm font-extrabold text-card hover:bg-card/15 focus-visible:outline-2 focus-visible:outline-card disabled:opacity-60";
-
-      return (
-            <li className="relative isolate overflow-hidden rounded-card bg-plum text-card shadow-[0_20px_40px_-24px_rgb(43_20_51/0.8)]">
-                  <span className="absolute inset-0 -z-10">
-                        <Photo url={recipe.imageUrl} width={720} height={900} className="size-full object-cover" fallback={<DishCover seed={recipe.id} layout="hero" className="size-full" />} />
-                  </span>
-                  <span aria-hidden className="absolute inset-0 -z-10 bg-[linear-gradient(180deg,rgb(29_9_44/0.4)_0%,transparent_22%,rgb(29_9_44/0.35)_45%,rgb(29_9_44/0.94)_100%)]" />
-
-                  <div className="flex items-start justify-between gap-2 p-4">
-                        <span className="inline-flex items-center gap-2 rounded-full bg-plum/55 py-1 pr-3 pl-1 text-sm font-extrabold backdrop-blur-md">
-                              <Avatar name={author.displayName} url={author.avatarUrl} size="xs" className="size-7 text-xs" />
-                              {author.displayName}
-                        </span>
-                        {item.chefConsultable && (
-                              <span title="Chef consultable" className="rounded-full bg-brand p-[3px]">
-                                    <MascotAvatar tone="white" className="size-10" />
-                                    <span className="sr-only">Chef consultable</span>
-                              </span>
-                        )}
-                  </div>
-
-                  <Link to={`/recetas/${recipe.id}`} className="block px-4 pt-28 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-card">
-                        {!compatibility.ok && (
-                              <span className={`${glass} mb-2 bg-secondary-soft/95 text-peach-ink`}>
-                                    {compatibility.adaptable ? "Tu chef la adapta" : `Tiene ${compatibility.conflicts.map((c) => c.label.toLowerCase()).join(", ")}`}
-                              </span>
-                        )}
-                        {recipe.cuisine && <span className="block text-sm font-bold text-secondary-soft">{recipe.cuisine.label}</span>}
-                        <span className="mt-0.5 block font-display text-section leading-tight font-extrabold text-balance">{recipe.title}</span>
-                  </Link>
-                  <ul className="flex flex-wrap gap-1.5 px-4 pt-3">
-                        {time && (
-                              <li className={glass}>
-                                    <Icon name="clock" className="size-3.5" />
-                                    {time}
-                              </li>
-                        )}
-                        {recipe.difficulty && (
-                              <li className={glass}>
-                                    <Icon name="flame" className="size-3.5" />
-                                    {recipe.difficulty.label}
-                              </li>
-                        )}
-                        <li className={glass} aria-label={`${n.kcal} kcal, ${Math.round(n.proteinG)} g de proteína, ${Math.round(n.carbsG)} g de carbohidratos y ${Math.round(n.fatG)} g de grasa`}>
-                              <span aria-hidden className="text-secondary">{n.kcal}kcal</span>
-                              <span aria-hidden className="text-[color-mix(in_srgb,var(--color-mint-soft)_80%,white)]">{Math.round(n.proteinG)}p</span>
-                              <span aria-hidden className="text-rose-soft">{Math.round(n.carbsG)}c</span>
-                              <span aria-hidden className="text-mustard-soft">{Math.round(n.fatG)}f</span>
-                        </li>
-                  </ul>
-                  <div className="flex items-center gap-1 px-2 pt-1 pb-3">
-                        <button type="button" aria-pressed={viewer.liked} aria-label={`Me gusta (${stats.likes})`} disabled={like.isPending} onClick={() => like.mutate({ id: recipe.id, on: !viewer.liked })} className={`toggle-pop ${stat}`}>
-                              <Icon name="heart" className={`size-5 ${viewer.liked ? "fill-current text-primary" : ""}`} />
-                              {stats.likes}
-                        </button>
-                        <button type="button" aria-label={`Comentarios (${stats.comments})`} onClick={() => setCommentsOpen(true)} className={stat}>
-                              <Icon name="chat" className="size-5" />
-                              {stats.comments}
-                        </button>
-                        <button type="button" aria-pressed={viewer.saved} aria-label="Guardar" disabled={save.isPending} onClick={() => save.mutate({ id: recipe.id, on: !viewer.saved })} className={`toggle-pop ${stat}`}>
-                              <Icon name="bookmark" className={`size-5 ${viewer.saved ? "fill-current" : ""}`} />
-                        </button>
-                        {item.chefConsultable && (
-                              <Link
-                                    to={`/chef?receta=${recipe.id}`}
-                                    className="ml-auto inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full bg-card px-3 text-xs font-extrabold whitespace-nowrap text-primary-strong focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-card"
-                              >
-                                    <Icon name="chat" className="size-4" />
-                                    Pregúntale al chef
-                              </Link>
-                        )}
-                  </div>
-                  {error && <p className="px-4 pb-3 text-sm font-semibold text-secondary-soft">{error.message}</p>}
-                  <CommentsDialog recipeId={recipe.id} open={commentsOpen} onClose={() => setCommentsOpen(false)} />
-            </li>
       );
 }

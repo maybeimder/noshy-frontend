@@ -12,7 +12,7 @@ type StepperProps = {
 
 export default function Stepper({ label, value, onChange, min = 1, max = 99, suffix }: StepperProps) {
       const button =
-            "grid size-11 place-items-center rounded-control bg-secondary-soft text-ink hover:bg-secondary/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong disabled:cursor-not-allowed disabled:opacity-50";
+            "grid size-11 place-items-center rounded-full bg-blush text-ink hover:brightness-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong disabled:cursor-not-allowed disabled:opacity-50";
 
       return (
             <div role="group" aria-label={label} className="flex items-center gap-3">
@@ -25,7 +25,7 @@ export default function Stepper({ label, value, onChange, min = 1, max = 99, suf
                   >
                         <Icon name="minus" className="size-5" />
                   </button>
-                  <output aria-live="polite" className="min-w-12 text-center text-title font-bold tabular-nums">
+                  <output aria-live="polite" className="min-w-10 text-center font-display text-title font-semibold tabular-nums">
                         {value}
                         {suffix && <span className="sr-only"> {suffix}</span>}
                   </output>

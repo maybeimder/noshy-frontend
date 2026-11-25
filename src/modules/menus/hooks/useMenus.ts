@@ -23,6 +23,7 @@ export function useMenuMutations() {
       const refresh = () => Promise.all([queryClient.invalidateQueries({ queryKey: ["menu"] }), queryClient.invalidateQueries({ queryKey: ["shoppingList"] })]);
       return {
             retry: useMutation({ mutationFn: menusApi.retry, onSuccess: refresh }),
+            regenerate: useMutation({ mutationFn: menusApi.regenerate, onSuccess: refresh }),
             add: useMutation({ mutationFn: menusApi.addEntry, onSuccess: refresh }),
             patch: useMutation({ mutationFn: menusApi.patchEntry, onSuccess: refresh }),
             remove: useMutation({ mutationFn: menusApi.removeEntry, onSuccess: refresh }),

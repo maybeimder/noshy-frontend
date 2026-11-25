@@ -8,3 +8,8 @@ createRoot(document.getElementById("root")!).render(
             <App />
       </StrictMode>,
 );
+
+// Opens without network and can be installed. Never in dev: it would serve stale modules.
+if (import.meta.env.PROD && "serviceWorker" in navigator) {
+      window.addEventListener("load", () => void navigator.serviceWorker.register("/sw.js").catch(() => undefined));
+}

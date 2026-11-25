@@ -11,15 +11,17 @@ import Icon from "@/shared/components/ui/Icon";
 import { MascotAvatar } from "@/shared/components/ui/MascotBubble";
 import { ErrorState } from "@/shared/components/ui/QueryState";
 import MacroTiles from "@/shared/components/ui/MacroTiles";
+import { TitleIcon } from "@/shared/components/ui/ScribbleText";
 import Stepper from "@/shared/components/ui/Stepper";
 import { ApiError, newKey } from "@/shared/lib/axios";
 import { formatTime, plural } from "@/shared/lib/format";
 import { shareText } from "@/shared/lib/share";
 import CommentsDialog from "../components/CommentsDialog";
+import ReportDialog from "../components/ReportDialog";
 import RecipeBody from "../components/RecipeBody";
 import RecipeHero, { heroButtonClass } from "../components/RecipeHero";
 import { RecipeDetailSkeleton } from "../components/RecipeSkeletons";
-import { useRecipe, useRecipeActions, useSyncSaved } from "../hooks/useRecipes";
+import { useRecipe, useRecipeActions } from "../hooks/useRecipes";
 
 export default function RecipeDetailPage() {
       const { id } = useParams();
@@ -30,11 +32,11 @@ export default function RecipeDetailPage() {
       const [original, setOriginal] = useState(false);
       const recipe = useRecipe(id, { servings, ...(original ? { adapted: false } : {}) });
       const { save, like } = useRecipeActions();
-      useSyncSaved(recipe.data?.id, recipe.data?.viewer.isSaved);
       const { addRecipe, addItems } = useShoppingMutations();
       const [question, setQuestion] = useState("");
       const [commentsOpen, setCommentsOpen] = useState(false);
       const [weekOpen, setWeekOpen] = useState(false);
+      const [reporting, setReporting] = useState(false);
       const [shared, setShared] = useState<string | null>(null);
       const cook = useMutation({
             mutationFn: cookApi.start,
@@ -48,7 +50,7 @@ export default function RecipeDetailPage() {
       if (recipe.isError) {
             return (
                   <>
-                        <PageHeader title="Receta" backTo="/recetas" />
+                        <PageHeader title="Receta" icon="book" backTo="/recetas?ver=comunidad" />
                         <main className="mx-auto max-w-xl px-5 pt-6">
                               <ErrorState message={recipe.error.message} onRetry={() => recipe.refetch()} />
                         </main>
@@ -60,7 +62,10 @@ export default function RecipeDetailPage() {
       const active = cook.error instanceof ApiError && cook.error.code === "SESSION_ALREADY_ACTIVE" ? String(cook.error.details.sessionId) : null;
       const alreadyInList = addRecipe.error instanceof ApiError && addRecipe.error.code === "RECIPE_ALREADY_IN_LIST";
       const actionError = save.error ?? like.error;
+      // The chef invented it for this user: nobody else can open it.
+      const onlyYours = r.author.type === "chef";
       const mine = r.author.id !== null && r.author.id === user?.id;
+      const community = r.author.type === "user" && r.author.id !== null && !mine;
       const time = formatTime(r.totalTimeMinutes);
       const canAsk = r.chefConsultable || r.author.type !== "user" || mine;
       const ask = (event: FormEvent) => {
@@ -73,13 +78,13 @@ export default function RecipeDetailPage() {
             <>
                   <RecipeHero
                         recipe={r}
-                        // Opened without history (a reload, a shared link): back to the tab this kind of recipe lives in.
-                        backTo={mine ? "/recetas" : r.author.type === "user" ? "/recetas?ver=comunidad" : "/recetas?ver=explorar"}
                         action={
                               <div className="flex gap-2">
-                                    <button type="button" aria-label="Compartir" className={heroButtonClass} onClick={async () => setShared(await shareText(r.title, `${r.title}\n${window.location.origin}/recetas/${r.id}`))}>
-                                          <Icon name="share" />
-                                    </button>
+                                    {!onlyYours && (
+                                          <button type="button" aria-label="Compartir" className={heroButtonClass} onClick={async () => setShared(await shareText(r.title, `${r.title}\n${window.location.origin}/r/${r.id}`))}>
+                                                <Icon name="share" />
+                                          </button>
+                                    )}
                                     <button
                                           type="button"
                                           aria-label={r.viewer.isLiked ? "Quitar me gusta" : "Me gusta"}
@@ -93,19 +98,33 @@ export default function RecipeDetailPage() {
                               </div>
                         }
                   >
-                        <p className="text-sm font-bold text-secondary-soft">{mine ? "Tu receta" : (r.cuisine?.label ?? `Por ${r.author.displayName}`)}</p>
-                        <h1 className="mt-1 text-[2rem] leading-[1.1] font-extrabold text-balance break-words">{r.title}</h1>
-                        {r.tags.length > 0 && <p className="mt-2 text-sm text-card/85">{r.tags.slice(0, 4).join(" · ")}</p>}
+                        <p className="text-lg text-card/85">
+                              {mine ? "Tu receta" : onlyYours ? "Creada para ti" : r.cuisine?.label}
+                              {!mine && !onlyYours && (
+                                    <>
+                                          {r.cuisine && " · "}
+                                          {community ? (
+                                                <Link to={`/creador/${r.author.id}`} className="underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-card">
+                                                      por {r.author.displayName}
+                                                </Link>
+                                          ) : (
+                                                !r.cuisine && `Por ${r.author.displayName}`
+                                          )}
+                                    </>
+                              )}
+                        </p>
+                        <h1 className="text-[2.125rem] leading-[1.1] font-medium break-words">{r.title}</h1>
+                        {r.tags.length > 0 && <p className="mt-1.5 text-sm text-card/80">{r.tags.slice(0, 4).join(" · ")}</p>}
                         <ul className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm font-bold">
                               {time && (
                                     <li className="flex items-center gap-1.5">
-                                          <Icon name="clock" className="size-4" />
+                                          <Icon name="timer" className="size-4" strokeWidth={2} />
                                           {time}
                                     </li>
                               )}
                               {r.rating && (
                                     <li className="flex items-center gap-1.5" aria-label={`${r.rating.avg} de 5, ${r.rating.count} opiniones`}>
-                                          <Icon name="star4" className="size-4 text-secondary" />
+                                          <Icon name="star" className="size-4" strokeWidth={2} />
                                           {r.rating.avg.toLocaleString("es-CO")} ({r.rating.count})
                                     </li>
                               )}
@@ -117,13 +136,16 @@ export default function RecipeDetailPage() {
                         </ul>
                   </RecipeHero>
 
-                  <main className="relative mx-auto -mt-8 flex max-w-xl flex-col gap-5 rounded-t-[2rem] bg-canvas px-5 pt-6 pb-36">
+                  <main className="relative mx-auto -mt-9 flex max-w-xl flex-col gap-5 rounded-t-[2.5rem] bg-canvas px-5 pt-8 pb-36">
                         {shared && (
                               <p role="status" className="rounded-control bg-field p-3 text-sm font-bold text-ink">
                                     {shared}
                               </p>
                         )}
-                        <MacroTiles macros={r.nutritionPerServing} />
+                        <div className="flex flex-col gap-2">
+                              <MacroTiles macros={r.nutritionPerServing} estimated={r.nutritionEstimated} />
+                              {r.nutritionEstimated && <p className="text-center text-xs text-ink-muted">Valores aproximados por porción</p>}
+                        </div>
                         {actionError && <p className="text-sm font-semibold text-error">{actionError.message}</p>}
 
                         {!r.compatibility.ok && !original && (
@@ -134,12 +156,12 @@ export default function RecipeDetailPage() {
                         )}
 
                         {(r.adaptation || original || canAsk) && (
-                              <section aria-label="Tu chef" className="flex flex-col gap-3 rounded-card bg-plum-glow p-4 text-card shadow-[0_18px_36px_-22px_rgb(43_20_51/0.8)]">
+                              <section aria-label="Tu chef" className="flex flex-col gap-3 rounded-[2rem] bg-plum-glow p-[1.125rem] text-card shadow-[0_18px_36px_-16px_rgb(46_19_45/0.5)]">
                                     <div className="flex items-center gap-3">
-                                          <MascotAvatar tone="white" className="size-12" />
+                                          <MascotAvatar tone="blush" className="size-12" />
                                           <div className="min-w-0 flex-1">
-                                                <h2 className="font-display text-title font-extrabold">{r.adaptation && !original ? "Tu chef la adaptó para ti" : "Pregúntale a tu chef"}</h2>
-                                                <p className="text-sm text-card/80">
+                                                <h2 className="font-display text-title font-medium">{r.adaptation && !original ? "Tu chef la adaptó para ti" : "Pregúntale a tu chef"}</h2>
+                                                <p className="text-sm text-marker">
                                                       {r.adaptation && !original ? r.adaptation.reasons.map((x) => x.label).join(" · ") : "Te ayuda con dudas, cambios y sustitutos."}
                                                 </p>
                                           </div>
@@ -147,9 +169,9 @@ export default function RecipeDetailPage() {
                                     {r.adaptation && !original && r.adaptation.substitutions.length > 0 && (
                                           <ul className="flex flex-col gap-2">
                                                 {r.adaptation.substitutions.map((s) => (
-                                                      <li key={s.from.ingredientId} className="flex items-center gap-2 rounded-control bg-card/10 px-3 py-2.5 text-sm">
-                                                            <span className="text-card/75">{s.from.label}</span>
-                                                            <Icon name="arrowRight" className="size-4 shrink-0 text-secondary" strokeWidth={2.25} />
+                                                      <li key={s.from.ingredientId} className="flex min-h-9 items-center gap-2.5 rounded-full bg-card/10 px-4 text-sm">
+                                                            <span className="text-marker/80">{s.from.label}</span>
+                                                            <Icon name="arrowRight" className="size-4 shrink-0 text-kcal-glow" strokeWidth={2} />
                                                             <strong className="min-w-0 flex-1">{s.to.label}</strong>
                                                       </li>
                                                 ))}
@@ -188,22 +210,27 @@ export default function RecipeDetailPage() {
 
                         <section aria-label="Porciones y más" className="flex flex-col gap-3 rounded-card bg-card p-4 shadow-soft">
                               <div className="flex items-center justify-between gap-3">
-                                    <span className="font-display text-title font-extrabold text-ink">Porciones</span>
-                                    <Stepper label="Porciones" value={r.servings.value} min={r.servings.min} max={r.servings.max} onChange={setServings} suffix="porciones" />
+                                    <h2 className="flex items-center gap-2 text-title font-semibold text-ink">
+                                          <TitleIcon name="community" />
+                                          Porciones
+                                    </h2>
+                                    <Stepper label="Porciones" value={r.servings.value} min={r.servings.min} max={r.servings.max} onChange={setServings} />
                               </div>
-                              <div className="grid grid-cols-3 gap-2">
+                              <div className={`grid gap-2 ${onlyYours ? "grid-cols-2" : "grid-cols-3"}`}>
                                     <Button variant="soft" className="min-h-12 flex-col gap-0.5 px-2 text-xs" loading={addRecipe.isPending} onClick={() => addRecipe.mutate({ recipeId: r.id, servings: r.servings.value, adaptationId: r.adaptation?.id ?? null })}>
                                           <Icon name="cart" className="size-5" />
                                           A la lista
                                     </Button>
                                     <Button variant="soft" className="min-h-12 flex-col gap-0.5 px-2 text-xs" onClick={() => setWeekOpen(true)}>
-                                          <Icon name="plus" className="size-5" />
+                                          <Icon name="calendar" className="size-5" />
                                           Mi semana
                                     </Button>
-                                    <Button variant="soft" className="min-h-12 flex-col gap-0.5 px-2 text-xs" onClick={() => setCommentsOpen(true)}>
-                                          <Icon name="mail" className="size-5" />
-                                          Comentarios
-                                    </Button>
+                                    {!onlyYours && (
+                                          <Button variant="soft" className="min-h-12 flex-col gap-0.5 px-2 text-xs" onClick={() => setCommentsOpen(true)}>
+                                                <Icon name="comment" className="size-5" />
+                                                Comentarios
+                                          </Button>
+                                    )}
                               </div>
                               {(addRecipe.data || addItems.data) && (
                                     <p role="status" className="rounded-control bg-mint-soft p-3 text-sm font-bold text-mint-ink">
@@ -220,6 +247,12 @@ export default function RecipeDetailPage() {
                               {addRecipe.error && <p className={`text-sm font-semibold ${alreadyInList ? "text-ink-muted" : "text-error"}`}>{addRecipe.error.message}</p>}
                               {addItems.error && <p className="text-sm font-semibold text-error">{addItems.error.message}</p>}
                         </section>
+                        {community && (
+                              <Button variant="tertiary" onClick={() => setReporting(true)} className="self-center text-ink-muted!">
+                                    <Icon name="alert" className="size-4" />
+                                    Reportar receta
+                              </Button>
+                        )}
                   </main>
 
                   {/* Save and the one dominant action, always in reach. */}
@@ -240,7 +273,7 @@ export default function RecipeDetailPage() {
                                           aria-pressed={r.viewer.isSaved}
                                           disabled={save.isPending}
                                           onClick={() => save.mutate({ id: r.id, on: !r.viewer.isSaved })}
-                                          className="toggle-pop grid size-14 shrink-0 place-items-center rounded-full bg-primary-soft text-primary-strong hover:bg-rose-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong disabled:opacity-60"
+                                          className="toggle-pop grid size-14 shrink-0 place-items-center rounded-full bg-blush text-primary-strong hover:brightness-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong disabled:opacity-60"
                                     >
                                           <Icon name="bookmark" className={`size-6 ${r.viewer.isSaved ? "fill-current" : ""}`} />
                                     </button>
@@ -248,6 +281,7 @@ export default function RecipeDetailPage() {
                                           size="lg"
                                           fullWidth
                                           arrow="chef"
+                                          className="font-display font-medium"
                                           loading={cook.isPending}
                                           disabled={!r.compatibility.ok || r.stepsCount === 0}
                                           onClick={() => cook.mutate({ recipeId: r.id, servings: r.servings.value, adaptationId: r.adaptation?.id ?? null, key: newKey() })}
@@ -258,7 +292,8 @@ export default function RecipeDetailPage() {
                         )}
                   </div>
 
-                  <CommentsDialog recipeId={r.id} open={commentsOpen} onClose={() => setCommentsOpen(false)} />
+                  {reporting && <ReportDialog target={{ targetType: "recipe", targetId: r.id }} onClose={() => setReporting(false)} />}
+                  <CommentsDialog recipeId={r.id} canModerate={mine} open={commentsOpen} onClose={() => setCommentsOpen(false)} />
                   <AddToWeekDialog recipe={r} servings={r.servings.value} open={weekOpen} onClose={() => setWeekOpen(false)} />
             </>
       );

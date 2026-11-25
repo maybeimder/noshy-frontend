@@ -55,7 +55,9 @@ export default function RecipeShopper({ open, onClose, onShop }: { open: boolean
 
 function Picker({ onPick }: { onPick: (recipe: Pick) => void }) {
       const saved = useSavedRecipes();
-      const [source, setSource] = useState<Source>(saved.recipes.length ? "saved" : "forYou");
+      const [chosen, setSource] = useState<Source | null>(null);
+      // Until the user picks: what they saved, if anything.
+      const source: Source = chosen ?? (saved.pending || saved.recipes.length ? "saved" : "forYou");
       const mine = useMyRecipes();
       const forYou = useRecommendations({ source: "forYou" });
 
@@ -65,7 +67,7 @@ function Picker({ onPick }: { onPick: (recipe: Pick) => void }) {
                   : source === "mine"
                     ? (mine.data?.pages ?? []).flatMap((p) => p.data).map((r) => ({ id: r.id, title: r.title, imageUrl: r.coverImageUrl }))
                     : (forYou.data?.pages ?? []).flatMap((p) => p.data);
-      const loading = source === "saved" ? saved.pending && !saved.recipes.length : source === "mine" ? mine.isPending : forYou.isPending;
+      const loading = source === "saved" ? saved.pending : source === "mine" ? mine.isPending : forYou.isPending;
 
       return (
             <div className="flex flex-col gap-3">
@@ -170,7 +172,7 @@ function Plan({ recipe, onBack, onDone, onShop }: { recipe: Pick; onBack: () => 
                   </div>
 
                   <p className="text-sm font-semibold text-ink-muted">
-                        {r.pantryMatch.have}/{r.pantryMatch.total} en tu despensa · te {missing.length === 1 ? "falta 1" : `faltan ${missing.length}`}
+                        {r.nutritionEstimated ? "Te" : `${r.pantryMatch.have}/${r.pantryMatch.total} en tu despensa · te`} {missing.length === 1 ? "falta 1" : `faltan ${missing.length}`}
                   </p>
 
                   <ul className="flex max-h-[45dvh] flex-col divide-y divide-line overflow-y-auto rounded-card bg-field/60 px-3">

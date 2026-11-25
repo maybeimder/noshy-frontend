@@ -9,6 +9,9 @@ export const formatNumber = (value: number) => numberFormat.format(value);
 
 export const formatMoney = (money: { amount: number }) => `$${numberFormat.format(money.amount)}`;
 
+/** «520 kcal»; «≈ 520 kcal» when the macros are an estimate. */
+export const formatKcal = (recipe: { nutritionPerServing: { kcal: number }; nutritionEstimated?: boolean }) => `${recipe.nutritionEstimated ? "≈ " : ""}${Math.round(recipe.nutritionPerServing.kcal)} kcal`;
+
 export const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
 
 /** Today in the user's zone as YYYY-MM-DD, the API's day format. */

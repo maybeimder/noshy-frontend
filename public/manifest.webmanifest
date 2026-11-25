@@ -1,0 +1,17 @@
+{
+      "name": "Noshy",
+      "short_name": "Noshy",
+      "description": "Tu chef de bolsillo: recetas, despensa y compras.",
+      "lang": "es",
+      "start_url": "/",
+      "scope": "/",
+      "display": "standalone",
+      "orientation": "portrait",
+      "background_color": "#fbf1ee",
+      "theme_color": "#fbf1ee",
+      "icons": [
+            { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+            { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+            { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+      ]
+}

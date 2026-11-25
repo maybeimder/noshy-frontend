@@ -1,6 +1,8 @@
 import { api, ApiError, unwrap } from "@/shared/lib/axios";
 import { tokenStorage } from "@/shared/lib/token-storage";
-import type { AuthResponse, LoginInput, OnboardingStatus, RegisterInput, User } from "../types";
+import type { AuthResponse, LoginInput, OnboardingStatus, RegisterInput, Tokens, User } from "../types";
+
+export type OAuthInput = { provider: "google" | "apple"; idToken: string; nonce?: string; name?: string };
 
 /** Terms the sign-up screen shows («Al continuar aceptas los Términos…»); the backend records consent to it. */
 export const TERMS_VERSION = "2026-09";
@@ -31,6 +33,16 @@ export const authApi = {
                   .post<{ data: AuthResponse }>("/auth/register", { name, email, password, acceptedTermsVersion: TERMS_VERSION })
                   .then(unwrap)
                   .then(toSession),
+      /** Creates the account the first time. */
+      oauth: ({ provider, ...input }: OAuthInput) =>
+            api
+                  .post<{ data: AuthResponse }>(`/auth/oauth/${provider}`, { ...input, acceptedTermsVersion: TERMS_VERSION })
+                  .then(unwrap)
+                  .then(toSession),
+      /** Ends the session on the server too: the refresh token stops working. */
+      logout: (refreshToken: string) => api.post("/auth/logout", { refreshToken }).then(() => undefined),
+      /** Closes every other session; this one goes on with the new tokens. */
+      changePassword: (input: { currentPassword: string; newPassword: string }) => api.post<{ data: { tokens: Tokens } }>("/me/password", input).then(unwrap),
       /** There is no /auth/me: account data and onboarding status live in two endpoints. */
       me: async (): Promise<User> => {
             const [settings, onboarding] = await Promise.all([
@@ -39,6 +51,4 @@ export const authApi = {
             ]);
             return { id: tokenSubject(), ...settings.account, onboardingStatus: onboarding.status };
       },
-      verifyEmail: (code: string) => api.post<{ data: { user: User } }>("/auth/email/verify", { code }).then(unwrap),
-      resendCode: () => api.post("/auth/email/resend").then(() => undefined),
 };

@@ -5,20 +5,23 @@ import NudgeCard from "@/modules/cooking/components/NudgeCard";
 import { useNudge } from "@/modules/cooking/hooks/useHome";
 import ReceiptScanner from "@/modules/receipts/components/ReceiptScanner";
 import { buttonBase, buttonVariants } from "@/shared/components/ui/Button";
-import Chips from "@/shared/components/ui/Chips";
 import { DishPlate } from "@/shared/components/ui/DishArt";
 import Icon from "@/shared/components/ui/Icon";
 import IngredientIcon from "@/shared/components/ui/IngredientIcon";
 import LoadMore from "@/shared/components/ui/LoadMore";
 import { EmptyState, ErrorState } from "@/shared/components/ui/QueryState";
+import RoundButton from "@/shared/components/ui/RoundButton";
+import { TitleIcon } from "@/shared/components/ui/ScribbleText";
 import { fieldClass } from "@/shared/components/ui/TextField";
 import { useRememberShape } from "@/shared/hooks/useShape";
+import { features } from "@/shared/config/features";
 import { useDebounced } from "@/shared/hooks/useDebounced";
 import { daysUntil, plural, relativeDay } from "@/shared/lib/format";
 import type { StoragePlace } from "@/shared/types/api";
 import AddPantryItem from "../components/AddPantryItem";
 import KitchenHeader from "../components/KitchenHeader";
 import PantryItemDialog from "../components/PantryItemDialog";
+import PlacePicker from "../components/PlacePicker";
 import PantrySkeleton, { SkPantryRows, type PantryShape } from "../components/PantrySkeleton";
 import { usePantry, usePantryOverview } from "../hooks/useInventory";
 import type { PantryItem } from "../types";
@@ -67,9 +70,24 @@ export default function PantryPage() {
       return (
             <>
                   <KitchenHeader
-                        title="Mi despensa"
-                        meta={loading ? null : overview.data ? `${plural(overview.data.totalItems, "ingrediente", "ingredientes")} · hoy` : undefined}
-                        actions={<ReceiptScanner variant="button" />}
+                        section="pantry"
+                        meta={loading ? null : overview.data ? `${plural(overview.data.totalItems, "ingrediente", "ingredientes")} · hoy` : "Lo que tienes en casa"}
+                        actions={
+                              <>
+                                    {features.receipts && <ReceiptScanner variant="button" />}
+                                    <RoundButton
+                                          tone="primary"
+                                          label={addOpen ? "Cerrar añadir" : "Añadir a la despensa"}
+                                          onClick={() => {
+                                                setAddQuery(undefined);
+                                                setAddOpen((v) => !v);
+                                                window.scrollTo({ top: 0, behavior: "smooth" });
+                                          }}
+                                    >
+                                          <Icon name={addOpen ? "close" : "plus"} strokeWidth={2.25} />
+                                    </RoundButton>
+                              </>
+                        }
                   />
 
                   {loading ? (
@@ -139,7 +157,8 @@ export default function PantryPage() {
                         {overview.data && overview.data.useSoon.length > 0 && !q && (
                               <section aria-labelledby="use-soon" className="flex flex-col gap-3">
                                     <div className="flex items-baseline justify-between gap-3">
-                                          <h2 id="use-soon" className="text-section font-extrabold text-ink">
+                                          <h2 id="use-soon" className="flex items-center gap-2 text-section font-semibold text-ink">
+                                                <TitleIcon name="clock" />
                                                 Úsalos pronto
                                           </h2>
                                           <span className="font-display text-title font-extrabold text-primary-strong tabular-nums" aria-label={plural(overview.data.useSoon.length, "ingrediente", "ingredientes")}>
@@ -162,7 +181,7 @@ export default function PantryPage() {
                         )}
 
                         {!empty && (
-                              <div className="-mx-5 flex items-center gap-2 pl-5">
+                              <div className="flex items-center gap-2">
                                     <button
                                           type="button"
                                           aria-label={searchOpen ? "Cerrar filtro" : "Filtrar mi despensa"}
@@ -175,15 +194,13 @@ export default function PantryPage() {
                                     >
                                           <Icon name={searchOpen ? "close" : "search"} className="size-5" />
                                     </button>
-                                    <div className="min-w-0 flex-1">
-                                          <Chips
-                                                bleed
-                                                label="Filtrar por lugar"
-                                                value={place}
-                                                onChange={setPlace}
-                                                options={[{ id: "all" as const, label: "Todo" }, ...placeOptions].map((o) => ({ ...o, label: o.label }))}
-                                          />
-                                    </div>
+                                    <PlacePicker
+                                          className="min-w-0 flex-1 rounded-full bg-card p-1 shadow-soft"
+                                          label="Filtrar por lugar"
+                                          value={place}
+                                          onChange={setPlace}
+                                          options={[{ id: "all" as const, label: "Todo", icon: "list" as const }, ...placeOptions]}
+                                    />
                               </div>
                         )}
 
@@ -245,6 +262,7 @@ export default function PantryPage() {
 
 function PantryRow({ item, onOpen }: { item: PantryItem; onOpen: () => void }) {
       const days = item.expiresOn ? daysUntil(item.expiresOn) : null;
+      const place = placeOptions.find((p) => p.id === item.storage);
       return (
             <li>
                   <button
@@ -255,10 +273,16 @@ function PantryRow({ item, onOpen }: { item: PantryItem; onOpen: () => void }) {
                         <IngredientIcon label={item.label} icon={item.icon} shape="circle" className="size-12" />
                         <span className="min-w-0 flex-1">
                               <span className="block truncate font-display font-extrabold text-ink">{item.label}</span>
-                              <span className="block truncate text-sm font-semibold text-ink-muted">
-                                    {[item.product?.brand, item.quantity?.display ?? item.product?.packLabel].filter(Boolean).join(" · ") ||
-                                          [placeOptions.find((p) => p.id === item.storage)?.label, item.expiresOn ? `vence ${relativeDay(item.expiresOn)}` : null].filter(Boolean).join(" · ") ||
-                                          "Toca para decir cuánto te queda"}
+                              <span className="flex items-center gap-1.5 text-sm text-ink-muted">
+                                    {place && (
+                                          <span title={place.label} className="shrink-0">
+                                                <Icon name={place.icon} className="size-4" />
+                                                <span className="sr-only">{place.label}.</span>
+                                          </span>
+                                    )}
+                                    <span className="min-w-0 truncate">
+                                          {[item.product?.brand, item.quantity?.display ?? item.product?.packLabel].filter(Boolean).join(" · ") || (item.expiresOn ? `vence ${relativeDay(item.expiresOn)}` : "Toca para decir cuánto te queda")}
+                                    </span>
                               </span>
                         </span>
                         <span className="flex w-[4.5rem] shrink-0 flex-col items-end gap-1">

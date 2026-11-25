@@ -1,9 +1,12 @@
 import { api, idempotent, unwrap } from "@/shared/lib/axios";
 import type { DaySummary, Macros } from "@/shared/types/api";
-import type { Home, LoggedMeal, LogMeal, Nudge, NudgePlacement } from "../types";
+import type { DaysHistory, Home, LoggedMeal, LogMeal, Nudge, NudgePlacement } from "../types";
 
 export const homeApi = {
       home: () => api.get<{ data: Home }>("/me/home").then(unwrap),
+      day: (date: string) => api.get<{ data: DaySummary }>(`/me/days/${date}`).then(unwrap),
+      /** At most 31 days, newest first. */
+      history: (from: string, to: string) => api.get<{ data: DaysHistory }>("/me/days", { params: { from, to } }).then(unwrap),
       logMeal: ({ date, meal, key }: { date: string; meal: LogMeal; key: string }) =>
             api.post<{ data: LoggedMeal }>(`/me/days/${date}/meals`, meal, idempotent(key)).then(unwrap),
       deleteMeal: ({ date, mealId }: { date: string; mealId: string }) =>

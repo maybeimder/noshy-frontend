@@ -19,4 +19,5 @@ export type LogMeal =
       | { slot: MealSlotId; recipeId: string; servings?: number }
       | { slot: MealSlotId; freeText: string; nutrition: Macros }
       | { slot: MealSlotId; skipped: true };
+export type DaysHistory = { target: Macros; days: { date: string; meals: number; consumed: Macros }[] };
 export type LoggedMeal = { meal: { id: string; slot: MealSlotId; label: string }; day: DaySummary };

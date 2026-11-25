@@ -11,7 +11,7 @@ import Photo from "@/shared/components/ui/Photo";
 import { EmptyState, ErrorState } from "@/shared/components/ui/QueryState";
 import Stepper from "@/shared/components/ui/Stepper";
 import { useRememberShape } from "@/shared/hooks/useShape";
-import { localDay, plural } from "@/shared/lib/format";
+import { formatKcal, localDay, plural } from "@/shared/lib/format";
 import type { MenuEntry, WeekMenu } from "../api/menus.api";
 import WeekSkeleton, { type WeekShape } from "../components/WeekSkeleton";
 import { useMenuMutations, useWeekMenu } from "../hooks/useMenus";
@@ -19,7 +19,8 @@ import { dayName, slotLabel, slots } from "../utils/week";
 
 export default function WeekPage() {
       const week = useWeekMenu();
-      const { toList, retry } = useMenuMutations();
+      const { toList, retry, regenerate } = useMenuMutations();
+      const [renewing, setRenewing] = useState(false);
       const [editingId, setEditingId] = useState<string | null>(null);
 
       const menu = week.data;
@@ -31,7 +32,7 @@ export default function WeekPage() {
       if (week.isPending || menu?.status === "generating") {
             return (
                   <>
-                        <KitchenHeader title="Mi semana" meta={week.isPending ? null : "Tu chef está armando el menú…"} />
+                        <KitchenHeader section="week" meta={week.isPending ? null : "Tu chef está armando el menú…"} />
                         <WeekSkeleton />
                   </>
             );
@@ -39,7 +40,7 @@ export default function WeekPage() {
 
       return (
             <>
-                  <KitchenHeader title="Mi semana" meta={plural(entries.length, "receta", "recetas")} />
+                  <KitchenHeader section="week" meta={plural(entries.length, "receta", "recetas")} />
                   <main className="mx-auto flex max-w-xl flex-col gap-5 px-5 pt-3">
                         {week.isError ? (
                               <ErrorState message={week.error.message} onRetry={() => week.refetch()} />
@@ -87,9 +88,33 @@ export default function WeekPage() {
                                     <Link to="/recetas?ver=explorar" className={`${buttonBase} ${buttonVariants.secondary} min-h-12 text-sm`}>
                                           Buscar recetas para la semana
                                     </Link>
+                                    <Button variant="tertiary" onClick={() => setRenewing(true)} className="self-center text-ink-muted!">
+                                          <Icon name="refresh" className="size-4" />
+                                          Armar otro menú
+                                    </Button>
                               </>
                         )}
                   </main>
+                  {menu && (
+                        <Dialog
+                              open={renewing}
+                              onClose={() => setRenewing(false)}
+                              title="¿Armar otro menú?"
+                              actions={
+                                    <>
+                                          <Button variant="soft" onClick={() => setRenewing(false)}>
+                                                Cancelar
+                                          </Button>
+                                          <Button loading={regenerate.isPending} onClick={() => regenerate.mutate(menu.id, { onSuccess: () => setRenewing(false) })}>
+                                                Sí, otro menú
+                                          </Button>
+                                    </>
+                              }
+                        >
+                              <p className="text-ink-muted">Tu chef cambia por otras las recetas de hoy en adelante, también las que pusiste tú. Tu lista de compras no cambia.</p>
+                              {regenerate.error && <FormAlert>{regenerate.error.message}</FormAlert>}
+                        </Dialog>
+                  )}
                   {menu && editing && <EntryDialog key={editing.id} menu={menu} entry={editing} onClose={() => setEditingId(null)} />}
             </>
       );
@@ -106,7 +131,7 @@ function EntryList({ entries, onEdit, withDate = false }: { entries: MenuEntry[]
                               <Link to={entry.recipe ? `/recetas/${entry.recipe.id}` : "#"} className="min-w-0 flex-1 focus-visible:outline-2 focus-visible:outline-primary-strong">
                                     <span className="block truncate font-bold text-ink">{entry.recipe?.title ?? "Receta no disponible"}</span>
                                     <span className="block truncate text-xs font-semibold text-ink-muted">
-                                          {[withDate && dayName(entry.date), slotLabel(entry.slot), entry.recipe && `${entry.recipe.nutritionPerServing.kcal} kcal`].filter(Boolean).join(" · ")}
+                                          {[withDate && dayName(entry.date), slotLabel(entry.slot), entry.recipe && formatKcal(entry.recipe)].filter(Boolean).join(" · ")}
                                     </span>
                               </Link>
                               <button

@@ -54,6 +54,12 @@ export function useIngredientSearch(query: string) {
       });
 }
 
+/** Brands of an ingredient. Only the base ones («ing_…») have them: the rest already are a product or plain text. */
+export function useIngredientProducts(ingredientId: string | null) {
+      const id = ingredientId?.startsWith("ing_") ? ingredientId : null;
+      return useQuery({ queryKey: ["ingredientProducts", id], queryFn: () => inventoryApi.products(id!), enabled: id !== null, staleTime: 5 * 60_000, retry: false });
+}
+
 export function usePantrySuggestions() {
       return useQuery({ queryKey: ["pantrySuggestions"], queryFn: inventoryApi.suggestions, staleTime: Infinity });
 }

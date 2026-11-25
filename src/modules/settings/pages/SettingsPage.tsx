@@ -7,19 +7,21 @@ import Button from "@/shared/components/ui/Button";
 import Chips from "@/shared/components/ui/Chips";
 import Dialog from "@/shared/components/ui/Dialog";
 import FormAlert from "@/shared/components/ui/FormAlert";
+import type { IconName } from "@/shared/components/ui/Icon";
 import ImagePicker from "@/shared/components/ui/ImagePicker";
 import { ErrorState } from "@/shared/components/ui/QueryState";
+import { TitleIcon } from "@/shared/components/ui/ScribbleText";
 import TextField from "@/shared/components/ui/TextField";
 import { settingsApi, type Settings, type SettingsPatch } from "../api/settings.api";
+import ChangePassword from "../components/ChangePassword";
 import SettingsSkeleton from "../components/SettingsSkeleton";
-import VerifyEmail from "../components/VerifyEmail";
 import { usePatchSettings, useSettings } from "../hooks/useSettings";
 
 export default function SettingsPage() {
       const settings = useSettings();
       return (
             <>
-                  <PageHeader title="Ajustes" backTo="/perfil" />
+                  <PageHeader title="Ajustes" icon="gear" backTo="/perfil" />
                   {settings.isPending ? (
                         <SettingsSkeleton />
                   ) : (
@@ -31,10 +33,13 @@ export default function SettingsPage() {
       );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, icon, children }: { title: string; icon: IconName; children: React.ReactNode }) {
       return (
             <section aria-label={title} className="flex flex-col gap-4 rounded-card bg-card p-5 shadow-soft">
-                  <h2 className="text-title font-extrabold text-ink">{title}</h2>
+                  <h2 className="flex items-center gap-2 text-title font-semibold text-ink">
+                        <TitleIcon name={icon} />
+                        {title}
+                  </h2>
                   {children}
             </section>
       );
@@ -70,9 +75,8 @@ function Sections({ settings }: { settings: Settings }) {
       return (
             <>
                   {patch.error && <FormAlert>{patch.error.message}</FormAlert>}
-                  {!account.emailVerified && <VerifyEmail />}
 
-                  <Section title="Cuenta">
+                  <Section title="Cuenta" icon="user">
                         <ImagePicker
                               label="Foto de perfil"
                               purpose="avatar"
@@ -91,7 +95,7 @@ function Sections({ settings }: { settings: Settings }) {
                               <TextField label="Nombre" maxLength={60} value={name} onChange={(e) => setName(e.target.value)} />
                               <TextField label="Apellido" maxLength={60} value={lastName} onChange={(e) => setLastName(e.target.value)} />
                               <p className="text-sm text-ink-muted">
-                                    {account.email} · {account.emailVerified ? "verificado" : "sin verificar"}
+                                    {account.email}
                               </p>
                               {accountChanged && (
                                     <Button type="submit" loading={patch.isPending} disabled={!name.trim()}>
@@ -111,7 +115,7 @@ function Sections({ settings }: { settings: Settings }) {
                         />
                   </Section>
 
-                  <Section title="Tu chef">
+                  <Section title="Tu chef" icon="chef">
                         <Choice
                               label="Tono"
                               options={[
@@ -131,25 +135,15 @@ function Sections({ settings }: { settings: Settings }) {
                               value={chef.proactivity}
                               onChange={(proactivity) => save({ chef: { proactivity } })}
                         />
-                        <Choice
-                              label="Unidades"
-                              options={[
-                                    { id: "metric" as const, label: "Métrico" },
-                                    { id: "imperial" as const, label: "Imperial" },
-                              ]}
-                              value={chef.units}
-                              onChange={(units) => save({ chef: { units } })}
-                        />
                         <Toggle label="Leer los pasos en voz alta" checked={chef.readStepsAloud} onChange={(readStepsAloud) => save({ chef: { readStepsAloud } })} />
                   </Section>
 
-                  <Section title="Notificaciones">
-                        <Toggle label="Cuando algo vence" checked={notifications.expiring} onChange={(expiring) => save({ notifications: { expiring } })} />
-                        <Toggle label="Ideas del día" checked={notifications.dailyIdeas} onChange={(dailyIdeas) => save({ notifications: { dailyIdeas } })} />
-                        <Toggle label="Comunidad" checked={notifications.community} onChange={(community) => save({ notifications: { community } })} />
+                  <Section title="Avisos" icon="clock">
+                        <Toggle label="Avisarme cuando algo vence" checked={notifications.expiring} onChange={(expiring) => save({ notifications: { expiring } })} />
                   </Section>
 
-                  <Section title="Privacidad">
+                  <Section title="Privacidad" icon="lock">
+                        <ChangePassword />
                         <DataExport />
                         <DeleteAccount email={account.email} onDeleted={logout} />
                   </Section>

@@ -27,7 +27,7 @@ export default function ReceiptScanner({ variant = "row" }: { variant?: "row" | 
                         <label
                               htmlFor={id}
                               aria-label={upload.isPending ? "Subiendo tu factura" : "Escanear una factura"}
-                              className={`grid size-14 shrink-0 cursor-pointer place-items-center rounded-full bg-[linear-gradient(135deg,var(--color-primary-strong),var(--color-salmon))] text-card shadow-brand transition-transform active:scale-95 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-primary-strong ${upload.isPending ? "pointer-events-none animate-pulse" : ""}`}
+                              className={`grid size-12 shrink-0 cursor-pointer place-items-center rounded-full bg-brand text-card shadow-brand transition-transform active:scale-95 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-primary-strong ${upload.isPending ? "pointer-events-none animate-pulse" : ""}`}
                         >
                               <Icon name="scan" />
                               <input

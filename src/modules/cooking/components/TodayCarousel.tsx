@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import DishCover from "@/shared/components/ui/DishArt";
 import Icon from "@/shared/components/ui/Icon";
 import Photo from "@/shared/components/ui/Photo";
-import { formatTime } from "@/shared/lib/format";
+import { formatKcal, formatTime } from "@/shared/lib/format";
 import type { RecipeCard } from "@/shared/types/api";
 
 // Full-bleed recipe cards that snap one at a time; the dots follow the scroll.
@@ -20,7 +20,7 @@ export default function TodayCarousel({ recipes }: { recipes: RecipeCard[] }) {
 
       return (
             <div className="flex flex-col gap-3">
-                  <ul ref={track} onScroll={onScroll} className="scrollbar-none flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth px-5 pb-2">
+                  <ul ref={track} onScroll={onScroll} className="scrollbar-none flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth px-5 pb-10 -mb-8">
                         {recipes.map((recipe) => {
                               const { have, total } = recipe.pantryMatch;
                               const tags = recipe.tags.slice(0, 4);
@@ -45,7 +45,7 @@ export default function TodayCarousel({ recipes }: { recipes: RecipeCard[] }) {
                                                 {/* Dark scrim only where text sits, so white type stays legible on any photo. */}
                                                 <span aria-hidden className="absolute inset-0 bg-[linear-gradient(180deg,rgb(29_9_44/0.35)_0%,transparent_22%,rgb(29_9_44/0.55)_50%,rgb(29_9_44/0.94)_100%)]" />
 
-                                                {total > 0 && (
+                                                {total > 0 && !recipe.nutritionEstimated && (
                                                       <span className="relative m-4 inline-flex items-center gap-1.5 self-start rounded-full bg-plum/70 px-3 py-1.5 text-xs font-extrabold backdrop-blur-sm">
                                                             <Icon name="sparkle" className="size-3.5 text-secondary" strokeWidth={2.25} />
                                                             {have}/{total} en tu despensa
@@ -55,11 +55,11 @@ export default function TodayCarousel({ recipes }: { recipes: RecipeCard[] }) {
                                                 <div className="relative mt-auto flex items-end gap-3 p-5">
                                                       <div className="min-w-0 flex-1">
                                                             <p className="text-sm font-bold text-secondary-soft">{recipe.cuisine?.label ?? recipe.reason?.label ?? "Para ti"}</p>
-                                                            <h3 className="mt-0.5 text-section leading-tight font-extrabold text-balance">{recipe.title}</h3>
+                                                            <h3 className="mt-0.5 text-section leading-tight font-semibold text-balance">{recipe.title}</h3>
                                                             {tags.length > 0 && <p className="mt-1 truncate text-sm text-card/80">{tags.join(" · ")}</p>}
                                                             <p className="mt-2 flex items-center gap-1.5 text-sm font-bold">
                                                                   <Icon name="clock" className="size-4" />
-                                                                  {[time, `${recipe.nutritionPerServing.kcal} kcal`].filter(Boolean).join(" · ")}
+                                                                  {[time, formatKcal(recipe)].filter(Boolean).join(" · ")}
                                                             </p>
                                                       </div>
                                                       <span className="grid size-12 shrink-0 place-items-center rounded-full bg-card text-ink transition-transform group-hover:translate-x-1">

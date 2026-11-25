@@ -1,19 +1,21 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import IngredientSearch from "@/modules/inventory/components/IngredientSearch";
-import VerifyEmail from "@/modules/settings/components/VerifyEmail";
 import Button from "@/shared/components/ui/Button";
 import FormAlert from "@/shared/components/ui/FormAlert";
 import Icon from "@/shared/components/ui/Icon";
 import ImagePicker from "@/shared/components/ui/ImagePicker";
+import IngredientIcon from "@/shared/components/ui/IngredientIcon";
 import { ErrorState } from "@/shared/components/ui/QueryState";
 import MacroTiles from "@/shared/components/ui/MacroTiles";
 import { MascotAvatar } from "@/shared/components/ui/MascotBubble";
+import QuantityField from "@/shared/components/ui/QuantityField";
 import RoundButton from "@/shared/components/ui/RoundButton";
+import { TitleIcon } from "@/shared/components/ui/ScribbleText";
 import TextField, { fieldClass } from "@/shared/components/ui/TextField";
 import { ApiError, newKey } from "@/shared/lib/axios";
 import type { UploadedMedia } from "@/shared/lib/upload";
-import { parseAmount, unitLabel } from "@/shared/lib/units";
+import { formatAmount, parseAmount, unitChoices, unitChoicesFor, type UnitChoices } from "@/shared/lib/units";
 import type { Macros, Unit } from "@/shared/types/api";
 import { EditorSkeleton } from "../components/RecipeSkeletons";
 import { useMyRecipeMutations, useRecipe } from "../hooks/useRecipes";
@@ -22,8 +24,10 @@ import type { ChefConsultable, Difficulty, Heat, MyRecipePatch, RecipeDetail } f
 const removeButton =
       "grid size-11 shrink-0 place-items-center rounded-control text-ink-muted hover:bg-field hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong disabled:invisible";
 
-type IngredientDraft = { ingredientId: string; label: string; amount: string; unit: Unit; units: Unit[]; prep: string };
-type StepDraft = { text: string; minutes: string; heat: Heat | "" };
+type IngredientDraft = { ingredientId: string; label: string; icon: string; amount: string; unit: Unit; choices: UnitChoices; prep: string };
+/** `uses`: ingredients the author put in this step; the backend places the rest from the text. */
+type StepDraft = { text: string; minutes: string; heat: Heat | ""; uses: string[] };
+const emptyStep: StepDraft = { text: "", minutes: "", heat: "", uses: [] };
 
 const difficulties: { id: Difficulty; label: string }[] = [
       { id: "easy", label: "Fácil" },
@@ -44,7 +48,10 @@ export default function RecipeEditorPage() {
                         <RoundButton label="Cerrar" onClick={() => navigate(id ? `/recetas/${id}` : "/recetas", { replace: true })}>
                               <Icon name="close" />
                         </RoundButton>
-                        <h1 className="text-center font-display text-title font-extrabold text-ink">{id ? "Editar receta" : "Nueva receta"}</h1>
+                        <h1 className="flex items-center justify-center gap-2 text-title font-semibold text-ink">
+                              <TitleIcon name={id ? "edit" : "pot"} />
+                              {id ? "Editar receta" : "Nueva receta"}
+                        </h1>
                         <button
                               type="submit"
                               form="recipe-form"
@@ -76,9 +83,10 @@ function toIngredientDraft(i: RecipeDetail["ingredients"][number]): IngredientDr
       return {
             ingredientId: i.ingredientId,
             label: i.label,
-            amount: i.quantity.value === null ? "" : String(i.quantity.value).replace(".", ","),
+            icon: i.icon,
+            amount: i.quantity.value === null ? "" : formatAmount(i.quantity.value),
             unit: i.quantity.unit,
-            units: [i.quantity.unit],
+            choices: unitChoicesFor(i.label, i.icon, i.quantity.unit),
             prep: i.prep ?? "",
       };
 }
@@ -98,8 +106,8 @@ function RecipeForm({ initial }: { initial?: RecipeDetail }) {
       const [difficulty, setDifficulty] = useState<Difficulty | "">(initial?.difficulty?.id ?? "");
       const [ingredients, setIngredients] = useState<IngredientDraft[]>(() => initial?.ingredients.map(toIngredientDraft) ?? []);
       const [steps, setSteps] = useState<StepDraft[]>(() => {
-            const loaded = initial?.steps?.map((s) => ({ text: s.text, minutes: s.timerSeconds ? String(Math.round((s.timerSeconds / 60) * 10) / 10).replace(".", ",") : "", heat: heatOf(s.heatLevel) })) ?? [];
-            return loaded.length ? loaded : [{ text: "", minutes: "", heat: "" }];
+            const loaded = initial?.steps?.map((s) => ({ text: s.text, minutes: s.timerSeconds ? String(Math.round((s.timerSeconds / 60) * 10) / 10).replace(".", ",") : "", heat: heatOf(s.heatLevel), uses: s.ingredients?.flatMap((i) => (i.ingredientId ? [i.ingredientId] : [])) ?? [] })) ?? [];
+            return loaded.length ? loaded : [emptyStep];
       });
       const [consultable, setConsultable] = useState<ChefConsultable | null>(null);
       const chef: ChefConsultable = consultable ?? { enabled: initial?.chefConsultable ?? false, useMyStyle: true, suggestSubstitutes: true };
@@ -108,7 +116,6 @@ function RecipeForm({ initial }: { initial?: RecipeDetail }) {
       const [saved, setSaved] = useState<{ macros: Macros | null; partial: boolean } | null>(null);
       const busy = create.isPending || update.isPending || publish.isPending;
       const error = create.error ?? update.error ?? publish.error;
-      const needsEmail = publish.error instanceof ApiError && publish.error.code === "EMAIL_NOT_VERIFIED";
       const details = error instanceof ApiError ? Object.values(error.fieldErrors) : [];
 
       /** Validates and saves the draft; null when something is missing. */
@@ -127,7 +134,7 @@ function RecipeForm({ initial }: { initial?: RecipeDetail }) {
                   .map((s, index) => {
                         const time = s.minutes.trim() ? parseAmount(s.minutes) : null;
                         if (s.minutes.trim() && time === null) next.steps = `Revisa los minutos del paso ${index + 1}.`;
-                        return { text: s.text.trim(), ...(time ? { timerSeconds: Math.round(time * 60) } : {}), ...(s.heat ? { heat: s.heat } : {}) };
+                        return { text: s.text.trim(), ...(time ? { timerSeconds: Math.round(time * 60) } : {}), ...(s.heat ? { heat: s.heat } : {}), ...(s.uses.length ? { ingredientIds: s.uses } : {}) };
                   });
             setErrors(next);
             publish.reset();
@@ -163,6 +170,15 @@ function RecipeForm({ initial }: { initial?: RecipeDetail }) {
             if (id) publish.mutate(id, { onSuccess: () => navigate("/recetas", { replace: true }) });
       };
       const setIngredient = (index: number, change: Partial<IngredientDraft>) => setIngredients((list) => list.map((item, i) => (i === index ? { ...item, ...change } : item)));
+      const removeIngredient = (index: number) => {
+            const id = ingredients[index]!.ingredientId;
+            setIngredients((list) => list.filter((_, i) => i !== index));
+            // The same ingredient may be there twice («sal» for the water and for the sauce).
+            if (ingredients.filter((i) => i.ingredientId === id).length === 1) setSteps((list) => list.map((s) => ({ ...s, uses: s.uses.filter((x) => x !== id) })));
+      };
+      /** An ingredient belongs to the one step that first uses it. */
+      const toggleUse = (index: number, id: string) =>
+            setSteps((list) => list.map((s, i) => ({ ...s, uses: i === index && !s.uses.includes(id) ? [...s.uses, id] : s.uses.filter((x) => x !== id) })));
       const setStep = (index: number, change: Partial<StepDraft>) => setSteps((list) => list.map((item, i) => (i === index ? { ...item, ...change } : item)));
 
       const macros = saved?.macros ?? (initial ? initial.nutritionPerServing : null);
@@ -267,7 +283,7 @@ function RecipeForm({ initial }: { initial?: RecipeDetail }) {
                               className="flex min-h-16 w-full items-center gap-3 p-3 text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-strong"
                         >
                               <span className="grid size-11 shrink-0 place-items-center rounded-control bg-rose-soft text-rose-ink">
-                                    <Icon name="cart" className="size-5" />
+                                    <Icon name="carrot" className="size-5" />
                               </span>
                               <span className="min-w-0 flex-1">
                                     <span className="block font-display font-extrabold text-ink">Ingredientes</span>
@@ -281,28 +297,24 @@ function RecipeForm({ initial }: { initial?: RecipeDetail }) {
                               <div className="flex flex-col gap-3 border-t border-line p-3">
                                     <ul className="flex flex-col gap-2">
                                           {ingredients.map((item, index) => (
-                                                <li key={`${item.ingredientId}-${index}`} className="flex flex-col gap-2 rounded-control bg-field p-3">
-                                                      <div className="flex items-center gap-2">
-                                                            <span className="min-w-0 flex-1 truncate font-bold text-ink">{item.label}</span>
-                                                            <button type="button" aria-label={`Quitar ${item.label}`} onClick={() => setIngredients((list) => list.filter((_, i) => i !== index))} className={removeButton}>
+                                                <li key={`${item.ingredientId}-${index}`} className="flex flex-col gap-2 rounded-card bg-field p-3">
+                                                      <div className="flex items-center gap-3">
+                                                            <IngredientIcon label={item.label} icon={item.icon} shape="circle" className="size-10" />
+                                                            <span className="min-w-0 flex-1 truncate font-display font-semibold text-ink">{item.label}</span>
+                                                            <button type="button" aria-label={`Quitar ${item.label}`} onClick={() => removeIngredient(index)} className={removeButton}>
                                                                   <Icon name="trash" className="size-5" />
                                                             </button>
                                                       </div>
-                                                      <div className="grid grid-cols-[1fr_auto] gap-2">
-                                                            <TextField label={`Cantidad de ${item.label}`} hideLabel tone="card" placeholder="Cantidad" inputMode="decimal" value={item.amount} onChange={(e) => setIngredient(index, { amount: e.target.value })} error={errors[`ingredient-${index}`]} />
-                                                            <select
-                                                                  aria-label={`Unidad de ${item.label}`}
-                                                                  value={item.unit}
-                                                                  onChange={(e) => setIngredient(index, { unit: e.target.value as Unit })}
-                                                                  className={`${fieldClass("card")} h-12 px-4`}
-                                                            >
-                                                                  {item.units.map((u) => (
-                                                                        <option key={u} value={u}>
-                                                                              {unitLabel(u)}
-                                                                        </option>
-                                                                  ))}
-                                                            </select>
-                                                      </div>
+                                                      <QuantityField
+                                                            tone="card"
+                                                            label={item.label}
+                                                            choices={item.choices}
+                                                            unit={item.unit}
+                                                            onUnit={(unit) => setIngredient(index, { unit })}
+                                                            amount={item.amount}
+                                                            onAmount={(amount) => setIngredient(index, { amount })}
+                                                            error={errors[`ingredient-${index}`]}
+                                                      />
                                                       <TextField label={`Preparación de ${item.label}`} hideLabel tone="card" placeholder="Preparación (opcional): en cubos…" maxLength={80} value={item.prep} onChange={(e) => setIngredient(index, { prep: e.target.value })} />
                                                 </li>
                                           ))}
@@ -310,7 +322,10 @@ function RecipeForm({ initial }: { initial?: RecipeDetail }) {
                                     <IngredientSearch
                                           label="Agregar ingrediente"
                                           placeholder="Agregar ingrediente…"
-                                          onPick={(o) => setIngredients((list) => [...list, { ingredientId: o.id, label: o.label, amount: "", unit: o.defaultUnit, units: o.allowedUnits, prep: "" }])}
+                                          onPick={(o) => {
+                                                const choices = unitChoices(o);
+                                                setIngredients((list) => [...list, { ingredientId: o.id, label: o.label, icon: o.icon, amount: "", unit: choices.suggested[0] ?? o.defaultUnit, choices, prep: "" }]);
+                                          }}
                                     />
                               </div>
                         )}
@@ -324,7 +339,7 @@ function RecipeForm({ initial }: { initial?: RecipeDetail }) {
                               className="flex min-h-16 w-full items-center gap-3 p-3 text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary-strong"
                         >
                               <span className="grid size-11 shrink-0 place-items-center rounded-control bg-peach-soft text-peach-ink">
-                                    <Icon name="receipt" className="size-5" />
+                                    <Icon name="list" className="size-5" />
                               </span>
                               <span className="min-w-0 flex-1">
                                     <span className="block font-display font-extrabold text-ink">Pasos</span>
@@ -366,6 +381,25 @@ function RecipeForm({ initial }: { initial?: RecipeDetail }) {
                                                                   <option value="high">Alto</option>
                                                             </select>
                                                       </div>
+                                                      {ingredients.length > 0 && (
+                                                            <div role="group" aria-label={`Ingredientes que usas en el paso ${index + 1}`} className="scrollbar-none -mr-3 flex gap-1.5 overflow-x-auto pr-3 pb-0.5">
+                                                                  {[...new Map(ingredients.map((i) => [i.ingredientId, i])).values()].map((i) => {
+                                                                        const on = step.uses.includes(i.ingredientId);
+                                                                        return (
+                                                                              <button
+                                                                                    key={i.ingredientId}
+                                                                                    type="button"
+                                                                                    aria-pressed={on}
+                                                                                    onClick={() => toggleUse(index, i.ingredientId)}
+                                                                                    className={`inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full py-1 pr-3 pl-1.5 text-xs font-bold transition-colors focus-visible:outline-2 focus-visible:outline-primary-strong ${on ? "bg-picked text-ink ring-2 ring-primary/60 ring-inset" : "bg-card text-ink-muted"}`}
+                                                                              >
+                                                                                    <IngredientIcon label={i.label} icon={i.icon} shape="circle" className={`size-7 text-xs! ${on ? "" : "opacity-60"}`} />
+                                                                                    <span className="max-w-28 truncate">{i.label}</span>
+                                                                              </button>
+                                                                        );
+                                                                  })}
+                                                            </div>
+                                                      )}
                                                 </div>
                                                 <button type="button" aria-label={`Quitar paso ${index + 1}`} disabled={steps.length === 1} onClick={() => setSteps((list) => list.filter((_, i) => i !== index))} className={removeButton}>
                                                       <Icon name="trash" className="size-5" />
@@ -373,7 +407,7 @@ function RecipeForm({ initial }: { initial?: RecipeDetail }) {
                                           </div>
                                     ))}
                                     {errors.steps && <p className="text-sm font-semibold text-error">{errors.steps}</p>}
-                                    <Button variant="dashed" size="lg" onClick={() => setSteps((list) => [...list, { text: "", minutes: "", heat: "" }])}>
+                                    <Button variant="dashed" size="lg" onClick={() => setSteps((list) => [...list, emptyStep])}>
                                           <Icon name="plus" className="size-5" strokeWidth={2.25} />
                                           Agregar paso
                                     </Button>
@@ -418,9 +452,8 @@ function RecipeForm({ initial }: { initial?: RecipeDetail }) {
                         )}
                   </section>
 
-                  {error && !needsEmail && <FormAlert>{[error.message, ...details].join(" ")}</FormAlert>}
+                  {error && <FormAlert>{[error.message, ...details].join(" ")}</FormAlert>}
                   {Object.keys(errors).length > 0 && <FormAlert>Revisa los campos marcados.</FormAlert>}
-                  {needsEmail && <VerifyEmail onVerified={onPublish} />}
                   {saved && !error && (
                         <p role="status" className="rounded-control bg-mint-soft p-3 text-sm font-bold text-mint-ink">
                               Borrador guardado.

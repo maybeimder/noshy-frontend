@@ -15,7 +15,7 @@ type AvatarProps = {
       className?: string;
 };
 
-// Photo when there is one (and it loads); otherwise the initial on brand pink with ciruela text.
+// Photo when there is one (and it loads); otherwise the white initial on the brand gradient.
 export default function Avatar({ name, url, size = "md", className = "" }: AvatarProps) {
       const [failed, setFailed] = useState(false);
       const { box, px } = sizes[size];
@@ -33,7 +33,7 @@ export default function Avatar({ name, url, size = "md", className = "" }: Avata
       return (
             <span
                   aria-hidden
-                  className={`${box} grid shrink-0 place-items-center rounded-full bg-primary font-logo font-extrabold text-ink ${className}`}
+                  className={`${box} grid shrink-0 place-items-center rounded-full font-logo font-extrabold text-card ${size === "xs" ? "bg-coral" : "bg-brand"} ${className}`}
             >
                   {name.trim().charAt(0).toUpperCase() || "·"}
             </span>

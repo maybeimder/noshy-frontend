@@ -1,6 +1,7 @@
 import { useMemo, useState, type CSSProperties } from "react";
 import ReceiptScanner from "@/modules/receipts/components/ReceiptScanner";
 import Button from "@/shared/components/ui/Button";
+import { features } from "@/shared/config/features";
 import { DishPlate } from "@/shared/components/ui/DishArt";
 import FormAlert from "@/shared/components/ui/FormAlert";
 import Icon from "@/shared/components/ui/Icon";
@@ -30,7 +31,7 @@ import {
 } from "../utils/onboarding";
 import BodyStep from "./BodyStep";
 import { CheckMark, Chip, GroupLabel, OptionCard, RoundStepper, StepHeader, StepTitle, ToneIcon } from "./OnboardingUI";
-import StartingPoint from "./StartingPoint";
+import StartingPoint, { StartingPointWait } from "./StartingPoint";
 
 type PlanFormProps = {
       initial?: PlanData | null;
@@ -46,7 +47,14 @@ type PlanFormProps = {
       onSkip?: () => void;
       /** Opens on this step (editing one answer from the «¡Listo!» summary). */
       initialStep?: number;
+      /** Onboarding left halfway: picks up there. */
+      draft?: PlanDraft | null;
+      /** Called on every step forward. */
+      onDraft?: (draft: PlanDraft) => void;
 };
+
+/** Never holds the body data: it is health data and stays in memory. */
+export type PlanDraft = { step: number; prefs: OnboardingPrefs; restrictions: string[]; mealsPerDay: number; /** They had filled «Sobre ti»: it has to be asked again. */ hadBody: boolean };
 
 export const planSteps = ["Objetivo", "Ritmo", "Sobre ti", "Restricciones", "Gustos", "Tu cocina", "Compras"];
 const last = planSteps.length - 1;
@@ -55,19 +63,19 @@ const MAX_GOALS = 2;
 
 const toggle = <T,>(list: T[], value: T) => (list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
 
-export default function PlanForm({ initial, submitLabel, submitting, error, onSubmit, onExit, onSkip, initialStep = 0 }: PlanFormProps) {
+export default function PlanForm({ initial, submitLabel, submitting, error, onSubmit, onExit, onSkip, initialStep = 0, draft, onDraft }: PlanFormProps) {
       const [savedPrefs, savePrefs] = useOnboardingPrefs();
-      const [step, setStep] = useState(initialStep);
+      const [step, setStep] = useState(draft ? Math.min(draft.step, draft.hadBody ? BODY_STEP : last) : initialStep);
       // What the API has now (editing) or the defaults (new account); changes are measured against it.
       const [before] = useState<PlanInput>(() => ({
             ...(initial ? toFormAnswers(initial, savedPrefs) : { prefs: { ...defaultPrefs, ...savedPrefs }, body: emptyBody, restrictions: [], mealsPerDay: 3 }),
             kcalTarget: null,
             kcalAdjusted: false,
       }));
-      const [prefs, setPrefs] = useState<OnboardingPrefs>(before.prefs);
-      const [restrictions, setRestrictions] = useState<string[]>(before.restrictions);
+      const [prefs, setPrefs] = useState<OnboardingPrefs>(draft ? { ...before.prefs, ...draft.prefs } : before.prefs);
+      const [restrictions, setRestrictions] = useState<string[]>(draft?.restrictions ?? before.restrictions);
       const [customRestriction, setCustomRestriction] = useState("");
-      const [mealsPerDay, setMealsPerDay] = useState(before.mealsPerDay);
+      const [mealsPerDay, setMealsPerDay] = useState(draft?.mealsPerDay ?? before.mealsPerDay);
       // null: the saved target, or the suggestion for the chosen goals and activity, until the user nudges it.
       const [caloriesDraft, setCaloriesDraft] = useState<number | null>(null);
 
@@ -79,7 +87,10 @@ export default function PlanForm({ initial, submitLabel, submitting, error, onSu
       const bodyKey = JSON.stringify(body.consent ? parsedBody.biometrics : null);
       const debouncedKey = useDebounced(bodyKey, 400);
       const biometrics = useMemo(() => JSON.parse(debouncedKey) as typeof parsedBody.biometrics, [debouncedKey]);
-      const previewQuery = useNutritionPreview({ goals: prefs.goals, activity: prefs.activity, biometrics });
+      // No numbers until the user told us about their body. Editing a plan made without it shows the saved target.
+      // `biometrics` lags behind what is typed: without it the average would flash first.
+      const showStartingPoint = body.consent && parsedBody.biometrics ? biometrics !== null : Boolean(initial) && isBodyEmpty(body);
+      const previewQuery = useNutritionPreview({ goals: prefs.goals, activity: prefs.activity, biometrics }, showStartingPoint);
       const preview = previewQuery.data;
       // Same rule as the backend: new goals, activity or body recalculate the target.
       const bodyChanged = JSON.stringify(before.body.consent ? parseBody(before.body).biometrics : null) !== bodyKey;
@@ -122,15 +133,19 @@ export default function PlanForm({ initial, submitLabel, submitting, error, onSu
                   setBodyErrors(errors);
                   if (Object.keys(errors).length) return;
             }
-            if (step < last) setStep(step + 1);
+            if (step < last) advance(!isBodyEmpty(body));
             else submit();
+      };
+      const advance = (hadBody: boolean) => {
+            setStep(step + 1);
+            onDraft?.({ step: step + 1, prefs, restrictions, mealsPerDay, hadBody });
       };
       const skipStep = () => {
             if (step === BODY_STEP) {
                   setBody(before.body);
                   setBodyErrors({});
             }
-            setStep(step + 1);
+            advance(step === BODY_STEP ? false : !isBodyEmpty(body));
       };
       const startingNote =
             preview?.basis !== "biometrics"
@@ -160,7 +175,7 @@ export default function PlanForm({ initial, submitLabel, submitting, error, onSu
 
                         {step === 0 && (
                               <>
-                                    <StepTitle title="¿Qué quieres lograr?">Elige hasta 2. Tu chef ajusta cada plato a esto, sin contar calorías por ti.</StepTitle>
+                                    <StepTitle title="¿Qué quieres lograr?" icon="target">Elige hasta 2. Tu chef ajusta cada plato a esto, sin contar calorías por ti.</StepTitle>
                                     <fieldset>
                                           <legend className="sr-only">Objetivos, hasta {MAX_GOALS}</legend>
                                           <div className="grid grid-cols-2 gap-3">
@@ -193,7 +208,7 @@ export default function PlanForm({ initial, submitLabel, submitting, error, onSu
 
                         {step === 1 && (
                               <>
-                                    <StepTitle title="¿Cómo es tu día?">Así tu chef calcula porciones realistas, no perfectas.</StepTitle>
+                                    <StepTitle title="¿Cómo es tu día?" icon="walk">Así tu chef calcula porciones realistas, no perfectas.</StepTitle>
                                     <fieldset>
                                           <legend>
                                                 <GroupLabel>Nivel de actividad</GroupLabel>
@@ -224,8 +239,6 @@ export default function PlanForm({ initial, submitLabel, submitting, error, onSu
                                                 })}
                                           </div>
                                     </fieldset>
-
-                                    {startingPoint}
                               </>
                         )}
 
@@ -240,13 +253,13 @@ export default function PlanForm({ initial, submitLabel, submitting, error, onSu
                                                 setCaloriesDraft(null);
                                           }}
                                     />
-                                    {startingPoint}
+                                    {showStartingPoint ? <div className="msg-in">{startingPoint}</div> : <StartingPointWait body={body} />}
                               </>
                         )}
 
                         {step === 3 && (
                               <>
-                                    <StepTitle title="¿Algo que no comas?">Nunca te lo voy a proponer, ni siquiera en recetas de la comunidad.</StepTitle>
+                                    <StepTitle title="¿Algo que no comas?" icon="alert">Nunca te lo voy a proponer, ni siquiera en recetas de la comunidad.</StepTitle>
                                     <section aria-labelledby="diet-style">
                                           <GroupLabel id="diet-style">Estilo de alimentación</GroupLabel>
                                           <div role="radiogroup" aria-labelledby="diet-style" className="flex flex-wrap gap-2">
@@ -313,7 +326,7 @@ export default function PlanForm({ initial, submitLabel, submitting, error, onSu
 
                         {step === 4 && (
                               <>
-                                    <StepTitle title="¿Qué se te antoja?">Toca los platos que te encantan. Así empiezo a conocer tu sazón.</StepTitle>
+                                    <StepTitle title="¿Qué se te antoja?" icon="heart">Toca los platos que te encantan. Así empiezo a conocer tu sazón.</StepTitle>
                                     {initial && !savedPrefs && (
                                           <p className="flex items-start gap-2 rounded-control bg-field p-3 text-sm font-semibold text-ink-muted">
                                                 <Icon name="info" className="mt-0.5 size-4 shrink-0" />
@@ -361,7 +374,7 @@ export default function PlanForm({ initial, submitLabel, submitting, error, onSu
 
                         {step === 5 && (
                               <>
-                                    <StepTitle title="¿Cómo es tu cocina?">Para proponerte recetas que de verdad vas a hacer.</StepTitle>
+                                    <StepTitle title="¿Cómo es tu cocina?" icon="pot">Para proponerte recetas que de verdad vas a hacer.</StepTitle>
                                     <section aria-labelledby="meals" className="flex items-center gap-3 rounded-card bg-peach-glow p-4 shadow-soft">
                                           <div className="min-w-0 flex-1">
                                                 <h2 id="meals" className="text-title font-extrabold text-ink">
@@ -434,7 +447,7 @@ export default function PlanForm({ initial, submitLabel, submitting, error, onSu
 
                         {step === 6 && (
                               <>
-                                    <StepTitle title="¿Dónde compras?">Así relaciono marcas y productos reales con tus recetas.</StepTitle>
+                                    <StepTitle title="¿Dónde compras?" icon="cart">Así relaciono marcas y productos reales con tus recetas.</StepTitle>
                                     <fieldset>
                                           <legend className="sr-only">Tiendas donde compras</legend>
                                           <div className="grid grid-cols-3 gap-2">
@@ -495,7 +508,7 @@ export default function PlanForm({ initial, submitLabel, submitting, error, onSu
                                           </label>
                                     </section>
 
-                                    <ReceiptScanner variant="feature" />
+                                    {features.receipts && <ReceiptScanner variant="feature" />}
                               </>
                         )}
                   </div>

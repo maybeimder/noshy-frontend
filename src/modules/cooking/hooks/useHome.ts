@@ -32,7 +32,12 @@ export function useDismissNudge() {
 export function useMealMutations() {
       const queryClient = useQueryClient();
       // The response already carries the new day.
-      const writeDay = ({ day }: { day: DaySummary }) => queryClient.setQueryData<Home>(homeKey, (home) => (home ? { ...home, day } : home));
+      const writeDay = ({ day }: { day: DaySummary }) => {
+            queryClient.setQueryData(["day", day.date], day);
+            // A meal of another day must not replace today's.
+            queryClient.setQueryData<Home>(homeKey, (home) => (home?.day && home.day.date === day.date ? { ...home, day } : home));
+            return queryClient.invalidateQueries({ queryKey: ["days"] });
+      };
       return {
             log: useMutation({ mutationFn: homeApi.logMeal, onSuccess: writeDay }),
             remove: useMutation({ mutationFn: homeApi.deleteMeal, onSuccess: writeDay }),

@@ -36,45 +36,58 @@ export function FeedSkeleton() {
       return (
             <SkGroup className="flex flex-col gap-4">
                   {shape.creators && (
-                        <div className="-mx-5 flex gap-4 overflow-hidden px-5 py-1">
-                              {times(4).map((i) => (
-                                    <div key={i} className="flex w-20 shrink-0 flex-col items-center gap-1">
-                                          <Sk className="size-[4.5rem] rounded-full" />
+                        <div className="-mx-5 flex gap-3 overflow-hidden px-5 py-1">
+                              {times(5).map((i) => (
+                                    <div key={i} className="flex w-16 shrink-0 flex-col items-center gap-1.5">
+                                          <Sk className="size-16 rounded-full" />
                                           <SkText size="xs" w="w-12" />
-                                          <Sk className="h-9 w-16 rounded-full" />
                                     </div>
                               ))}
                         </div>
                   )}
+                  <Sk className="h-12 rounded-full" />
                   <SkChips bleed />
                   {shape.count === 0 ? (
                         <Sk className="h-60 rounded-card" />
                   ) : (
                         times(Math.min(3, shape.count)).map((i) => (
-                              <div key={i} className="overflow-hidden rounded-card bg-card shadow-soft">
-                                    <Sk className="h-48 rounded-none" />
-                                    <div className="flex items-center gap-3 px-4 pt-3">
-                                          <Sk className="size-11 shrink-0 rounded-full" />
-                                          <div className="min-w-0 flex-1">
-                                                <SkText size="title" w="w-40" />
-                                                <SkText size="xs" w="w-32" />
-                                          </div>
-                                    </div>
-                                    <div className="h-[3.25rem]" />
-                              </div>
+                              <Sk key={i} className="h-[24.5rem] rounded-[2.25rem]" />
                         ))
                   )}
             </SkGroup>
       );
 }
 
+export function CreatorSkeleton() {
+      return (
+            <SkMain className="mx-auto flex max-w-xl flex-col gap-5 px-5 pt-3">
+                  <Sk className="h-[7.75rem] rounded-[2rem]" />
+                  <Sk className="h-[24.5rem] rounded-[2.25rem]" />
+            </SkMain>
+      );
+}
+
 export function CookedSkeleton() {
       const shape = useShape<CookedShape>("cooked", { count: 4, nudge: false });
       return (
-            <SkMain className="mx-auto flex max-w-xl flex-col gap-4 px-5 pt-3">
-                  {shape.nudge && <Sk className="h-16 rounded-full" />}
+            <SkMain className="mx-auto flex max-w-xl flex-col gap-5 px-5 pt-2">
                   <SkChips bleed />
-                  {shape.count === 0 ? <Sk className="h-48 rounded-card" /> : <SkRecipeGrid count={shape.count} />}
+                  {shape.nudge && <Sk className="h-[4.25rem] rounded-[2rem]" />}
+                  {shape.count === 0 ? (
+                        <Sk className="h-48 rounded-card" />
+                  ) : (
+                        <div aria-hidden className="grid grid-cols-3 gap-x-3 gap-y-6 pt-1">
+                              {times(shape.count).map((i) => (
+                                    <div key={i} className="flex flex-col items-center gap-2.5">
+                                          <Sk className="aspect-square w-full max-w-28 rounded-full" />
+                                          <div className="flex flex-col items-center">
+                                                <SkText size="sm" w="w-20" />
+                                                <SkText size="xs" w="w-16" />
+                                          </div>
+                                    </div>
+                              ))}
+                        </div>
+                  )}
             </SkMain>
       );
 }
@@ -83,8 +96,8 @@ export function RecipeDetailSkeleton({ id }: { id: string | undefined }) {
       const seed = useRecipeSeed(id);
       return (
             <>
-                  {seed ? <RecipeHero recipe={seed} backTo="/recetas" /> : <Sk className="mx-auto h-80 max-w-xl rounded-none" />}
-                  <SkMain className="relative mx-auto -mt-10 flex max-w-xl flex-col gap-4 rounded-t-[2rem] bg-canvas px-5 pt-6">
+                  {seed ? <RecipeHero recipe={seed} /> : <Sk className="mx-auto h-80 max-w-xl rounded-none" />}
+                  <SkMain className="relative mx-auto -mt-9 flex max-w-xl flex-col gap-4 rounded-t-[2.5rem] bg-canvas px-5 pt-8">
                         <div className="flex flex-col gap-3">
                               <SkText size="sm" w="w-40" />
                               {seed ? <h1 className="text-page leading-tight font-extrabold break-words text-ink">{seed.title}</h1> : <SkText size="page" w="w-64" />}

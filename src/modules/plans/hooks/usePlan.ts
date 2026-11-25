@@ -11,10 +11,11 @@ export function useProfile() {
 }
 
 /** kcal and macro split for the chosen goals, activity and body; saves nothing. */
-export function useNutritionPreview(input: Pick<OnboardingPrefs, "goals" | "activity"> & { biometrics: Biometrics | null }) {
+export function useNutritionPreview(input: Pick<OnboardingPrefs, "goals" | "activity"> & { biometrics: Biometrics | null }, enabled: boolean) {
       return useQuery({
             queryKey: ["nutritionPreview", input.goals, input.activity, input.biometrics],
             queryFn: () => plansApi.preview(input),
+            enabled,
             staleTime: Infinity,
             placeholderData: keepPreviousData,
       });

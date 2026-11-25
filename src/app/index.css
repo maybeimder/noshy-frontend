@@ -1,23 +1,23 @@
 @import "tailwindcss";
 
-/* Tokens from DESIGN.md (incl. the palette sampled from ref/ screens) — do not add values outside it. */
+/* Palette sampled from the refactor screens (Inicio, Mi cocina, Comunidad) — do not add values outside it. */
 @theme {
       /* Brand */
-      --color-primary: #e94b97; /* brand.primary */
-      --color-primary-strong: #c9307c; /* brand.primary.strong — buttons, links, active states */
-      --color-primary-soft: #fbdde9; /* brand.primary.soft */
-      --color-secondary: #f2a65a; /* brand.secondary — warm orange */
-      --color-secondary-soft: #f6c9b0; /* brand.secondary.soft — peach cards */
+      --color-primary: #ef4c73; /* brand.primary */
+      --color-primary-strong: #d81b60; /* brand.primary.strong — buttons, links, active states */
+      --color-primary-soft: #fddee6; /* brand.primary.soft */
+      --color-secondary: #ff9d52; /* brand.secondary — warm orange */
+      --color-secondary-soft: #ffd3b0; /* brand.secondary.soft — peach cards */
 
       /* Surfaces and text */
-      --color-canvas: #fbf3ef; /* surface.canvas */
+      --color-canvas: #fbf1ee; /* surface.canvas */
       --color-card: #ffffff; /* surface.card */
       --color-field: #f7eee9; /* surface.field — filled inputs */
-      --color-ink: #2b1433; /* text.primary — ciruela */
-      --color-ink-muted: #715b77; /* text.secondary */
-      --color-plum: #3a1b44; /* surface.plum — dark feature cards */
-      --color-wine: #5e163b; /* brand.wine — wordmark and mascot line */
-      --color-line: #ebdce3; /* border.subtle */
+      --color-ink: #2e132d; /* text.primary — ciruela */
+      --color-ink-muted: #7a6676; /* text.secondary */
+      --color-plum: #3b1839; /* surface.plum — dark feature cards */
+      --color-wine: #7d184a; /* brand.wine — wordmark and mascot line */
+      --color-line: #f0e2e6; /* border.subtle */
 
       /* Status */
       --color-success: #2e7341; /* status.success */
@@ -27,21 +27,45 @@
       --color-online: #2e9b57; /* status.online */
 
       /* Tone families: soft surface + readable text on it (tiles, chips, macros, categories) */
-      --color-peach-soft: #ffe3d7;
+      --color-peach-soft: #ffe2d3;
       --color-peach-ink: #b8401f;
-      --color-rose-soft: #fbdde9;
+      --color-rose-soft: #ffdae7;
       --color-rose-ink: #a42a50;
-      --color-mustard-soft: #fce6b4;
+      --color-mustard-soft: #ffe8c4;
       --color-mustard-ink: #94600f;
-      --color-sky-soft: #dce7fb;
+      --color-sky-soft: #dbecff;
       --color-sky-ink: #2754b8;
-      --color-mint-soft: #d7edd5;
-      --color-mint-ink: #2e7341;
+      --color-mint-soft: #dcf4e6;
+      --color-mint-ink: #1d7a4a;
       --color-olive-soft: #efe6cc;
       --color-olive-ink: #6f5714;
-      --color-lilac-soft: #ebdff7;
+      --color-lilac-soft: #f0dff6;
       --color-lilac-ink: #6e44c9;
       --color-mist-soft: #efe9ec;
+
+      /* Macros: the same colour for each one on every screen. Solid for bars, soft for tracks and tiles, ink for text, glow for text on dark. */
+      --color-kcal: #ff8a3d;
+      --color-kcal-soft: #ffe7d4;
+      --color-kcal-ink: #b4541a;
+      --color-kcal-glow: #ffb067;
+      --color-protein: #2fb36e;
+      --color-protein-soft: #dcf4e6;
+      --color-protein-ink: #1d7a4a;
+      --color-protein-glow: #6fe3a1;
+      --color-carbs: #e8445a;
+      --color-carbs-soft: #ffe1e4;
+      --color-carbs-ink: #b42338;
+      --color-carbs-glow: #ff8a98;
+      --color-fat: #f2b829;
+      --color-fat-soft: #fff3c9;
+      --color-fat-ink: #8a6500;
+      --color-fat-glow: #ffd95a;
+
+      /* Gradient stops */
+      --color-brand-from: #df206a;
+      --color-brand-to: #ff7f7b;
+      --color-apricot: #ffb37a;
+      --color-marker: #f6a9c6;
 
       /* Vivid accents: dish illustrations, avatars, recipe colors */
       --color-tomato: #e4452f;
@@ -56,9 +80,9 @@
       --color-noodle: #f6c66b;
 
       /* Typography */
-      --font-sans: "Nunito", ui-sans-serif, system-ui, sans-serif;
-      --font-display: "Outfit", "Nunito", ui-sans-serif, sans-serif;
-      --font-logo: "Outfit", "Nunito", ui-sans-serif, sans-serif;
+      --font-sans: "Nunito Sans", ui-sans-serif, system-ui, sans-serif;
+      --font-display: "Fredoka", "Nunito Sans", ui-sans-serif, sans-serif;
+      --font-logo: "Fredoka", "Nunito Sans", ui-sans-serif, sans-serif;
       /* Cooking mode: step titles read like a cookbook (refactor nov 2026). */
       --font-serif: "Fraunces", ui-serif, Georgia, serif;
 
@@ -91,7 +115,7 @@
       h1,
       h2,
       h3 {
-            @apply font-display tracking-tight;
+            @apply font-display;
       }
 }
 
@@ -105,16 +129,77 @@
 
 /* Visual refactor (nov 2026): gradients built only from the palette tokens above. */
 
-/* Primary action: deep pink where the white label sits (4.8:1), brightening toward the arrow. */
+/* Primary action: raspberry into coral. */
 @utility bg-brand {
-      background-image: linear-gradient(100deg, var(--color-primary-strong) 0%, var(--color-primary-strong) 40%, var(--color-primary) 100%);
+      background-image: linear-gradient(135deg, var(--color-brand-from) 0%, var(--color-brand-to) 100%);
+}
+
+/* Story rings (creators): raspberry on top, apricot at the bottom. */
+@utility bg-story {
+      background-image: linear-gradient(180deg, var(--color-brand-from) 0%, var(--color-brand-to) 60%, var(--color-apricot) 100%);
+}
+
+/* Small avatars over photos. */
+@utility bg-coral {
+      background-image: linear-gradient(135deg, var(--color-brand-to) 0%, var(--color-apricot) 100%);
+}
+
+/* Secondary round button: a hint of pink into peach. */
+@utility bg-blush {
+      background-image: linear-gradient(150deg, #ffe1ea 0%, #fff1e4 100%);
+}
+
+/* Chef notes on Mi cocina: lilac into pink. */
+@utility bg-lilac-glow {
+      background-image: linear-gradient(150deg, #f1daf5 0%, #ffe0ea 85%);
+}
+
+/* Calories: the day's bar and the «quedan» pill. */
+@utility bg-kcal-bar {
+      background-image: linear-gradient(90deg, var(--color-kcal-glow) 0%, var(--color-kcal) 100%);
+}
+
+@utility bg-kcal-pill {
+      background-image: linear-gradient(to bottom right, #ffbb82 0%, #ffe7cc 100%);
+}
+
+/* Macro tiles: each macro's colour, strong in one corner and pale in the other. */
+@utility bg-kcal-tile {
+      background-image: linear-gradient(to bottom right, #ffba80 0%, #ffe6cc 100%);
+}
+
+@utility bg-protein-tile {
+      background-image: linear-gradient(to bottom right, #adeac4 0%, #e6f9ed 100%);
+}
+
+@utility bg-carbs-tile {
+      background-image: linear-gradient(to bottom right, #ffaab5 0%, #ffe3e7 100%);
+}
+
+@utility bg-fat-tile {
+      background-image: linear-gradient(to bottom right, #ffdb80 0%, #fff5cb 100%);
+}
+
+/* «4/5 en tu despensa». */
+@utility bg-mint-glow {
+      background-image: linear-gradient(90deg, #d6f3e4 0%, #eaf6db 100%);
+}
+
+/* Plates on Mi cocina: one pastel on top, another at the bottom, white between them. */
+@utility bg-plate-ring {
+      background-image: linear-gradient(180deg, var(--ring-from) 0%, var(--color-card) 50%, var(--ring-to) 100%);
+}
+
+/* Data tags over recipe photos: dark glass, lit from above. */
+@utility bg-tag {
+      background-image: linear-gradient(180deg, rgb(78 58 74 / 0.92) 0%, rgb(27 12 24 / 0.92) 100%);
+      box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.14);
 }
 
 /* Dark feature surfaces (welcome, starting point, nudges): plum into wine. */
 @utility bg-plum-glow {
       background-color: var(--color-plum);
-      background-image: radial-gradient(120% 90% at 85% 0%, var(--color-wine) 0%, transparent 60%),
-            linear-gradient(160deg, var(--color-plum) 0%, var(--color-wine) 100%);
+      background-image: linear-gradient(145deg, #4a1d47 0%, var(--color-ink) 58%, var(--color-wine) 100%);
 }
 
 /* Warm banners (meals per day, pantry, shopping summary). */
@@ -128,11 +213,11 @@
 }
 
 @utility shadow-soft {
-      box-shadow: 0 8px 20px -14px rgb(43 20 51 / 0.35);
+      box-shadow: 0 8px 22px -14px rgb(46 19 45 / 0.3);
 }
 
 @utility shadow-brand {
-      box-shadow: 0 12px 24px -12px rgb(201 48 124 / 0.65);
+      box-shadow: 0 8px 20px -4px rgb(223 32 106 / 0.38);
 }
 
 @layer base {
@@ -172,7 +257,7 @@
             border-radius: 999px;
             background: var(--color-card);
             border: 6px solid var(--color-primary-strong);
-            box-shadow: 0 4px 10px -4px rgb(201 48 124 / 0.6);
+            box-shadow: 0 4px 10px -4px rgb(216 27 96 / 0.6);
       }
       &::-moz-range-thumb {
             width: 1rem;
@@ -232,10 +317,10 @@
 @keyframes heat-glow {
       0%,
       100% {
-            box-shadow: 0 0 0 0 rgb(233 75 151 / 0.55);
+            box-shadow: 0 0 0 0 rgb(239 76 115 / 0.55);
       }
       50% {
-            box-shadow: 0 0 0 6px rgb(233 75 151 / 0);
+            box-shadow: 0 0 0 6px rgb(239 76 115 / 0);
       }
 }
 
@@ -301,6 +386,42 @@
       @media (prefers-reduced-motion: reduce) {
             animation-duration: 2.4s;
             translate: none;
+      }
+}
+
+/* Order tickets: a torn, zigzag edge. The mask also clips shadows, so those go on a parent as a drop-shadow. */
+@utility ticket-bottom {
+      mask: conic-gradient(from -45deg at bottom, transparent, black 1deg 89deg, transparent 90deg) 50% / 12px 100%;
+}
+
+@utility ticket-top {
+      mask: conic-gradient(from 135deg at top, transparent, black 1deg 89deg, transparent 90deg) 50% / 12px 100%;
+}
+
+/* The lid of the thinking pot. */
+@keyframes pot-lid {
+      0%,
+      60%,
+      100% {
+            transform: none;
+      }
+      70% {
+            transform: translateY(-2.5px) rotate(-5deg);
+      }
+      80% {
+            transform: translateY(0) rotate(3deg);
+      }
+      90% {
+            transform: translateY(-1.5px) rotate(-2deg);
+      }
+}
+
+@utility pot-lid {
+      transform-origin: 24px 24px;
+      animation: pot-lid 1.1s ease-in-out infinite;
+
+      @media (prefers-reduced-motion: reduce) {
+            animation: none;
       }
 }
 

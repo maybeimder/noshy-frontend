@@ -39,7 +39,7 @@ const components: Components = {
 
 export default function ChefMarkdown({ children }: { children: string }) {
       return (
-            <div className="flex flex-col gap-3 break-words">
+            <div className="flex flex-col gap-3 [overflow-wrap:anywhere]">
                   <Markdown remarkPlugins={[remarkGfm]} components={components} disallowedElements={["img"]} unwrapDisallowed>
                         {children}
                   </Markdown>

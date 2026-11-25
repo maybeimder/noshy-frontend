@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import Icon, { type IconName } from "@/shared/components/ui/Icon";
-import { MarkerText } from "@/shared/components/ui/ScribbleText";
+import { MarkerText, TitleIcon } from "@/shared/components/ui/ScribbleText";
 import { tones, type Tone } from "@/shared/lib/tones";
 
 const focusRing = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong";
@@ -58,11 +58,14 @@ export function StepHeader({ step, total, label, onBack, backLabel, onSkip }: St
 }
 
 /** Big title with the felt-tip highlight plus a short line under it. */
-export function StepTitle({ title, children }: { title: string; children: ReactNode }) {
+export function StepTitle({ title, icon, children }: { title: string; icon: IconName; children: ReactNode }) {
       return (
             <div>
-                  <h1 className="text-[1.75rem] leading-tight font-extrabold text-balance text-ink">
-                        <MarkerText>{title}</MarkerText>
+                  <h1 className="flex items-center gap-2.5 text-[1.75rem] leading-tight text-ink">
+                        <TitleIcon name={icon} />
+                        <span className="min-w-0 text-balance">
+                              <MarkerText>{title}</MarkerText>
+                        </span>
                   </h1>
                   <p className="mt-2 text-base text-ink-muted">{children}</p>
             </div>

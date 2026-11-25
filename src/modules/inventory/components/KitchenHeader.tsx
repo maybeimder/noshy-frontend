@@ -1,89 +1,77 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
-import { Link, useLocation } from "react-router-dom";
+import type { ReactNode } from "react";
+import { Link } from "react-router-dom";
+import ScreenHeader from "@/shared/components/layout/ScreenHeader";
 import Icon, { type IconName } from "@/shared/components/ui/Icon";
-import { MarkerText } from "@/shared/components/ui/ScribbleText";
-import { SkText } from "@/shared/components/ui/Skeleton";
 
-// The «⌄ Mi cocina» selector (contract: navigation only, no endpoint).
-export const kitchenSections: { to: string; label: string; icon: IconName }[] = [
-      { to: "/cocinadas", label: "Mi cocina", icon: "kitchen" },
-      { to: "/despensa", label: "Mi despensa", icon: "pantry" },
-      { to: "/compras", label: "Lista de compras", icon: "cart" },
-      { to: "/semana", label: "Mi semana", icon: "clock" },
+type Section = "cooked" | "recipes" | "pantry" | "week";
+type PantryTab = "items" | "shopping";
+
+const sections: { id: Section; to: string; tab: string; title: string; icon: IconName }[] = [
+      { id: "cooked", to: "/cocinadas", tab: "Cocinadas", title: "Mi cocina", icon: "kitchen" },
+      { id: "recipes", to: "/recetas?ver=explorar", tab: "Recetas", title: "Recetas", icon: "pot" },
+      { id: "pantry", to: "/despensa", tab: "Despensa", title: "Mi despensa", icon: "pantry" },
+      { id: "week", to: "/semana", tab: "Semana", title: "Mi semana", icon: "calendar" },
+];
+
+const pantryTabs: { id: PantryTab; to: string; label: string; icon: IconName }[] = [
+      { id: "items", to: "/despensa", label: "Lo que tengo", icon: "jar" },
+      { id: "shopping", to: "/compras", label: "Lista de compras", icon: "cart" },
 ];
 
 type KitchenHeaderProps = {
-      title: string;
-      /** Under the title («32 ingredientes · hoy»); null while it loads, so it keeps its line. */
-      meta?: string | null;
+      section: Section;
+      /** The shopping list is a part of the pantry. */
+      pantryTab?: PantryTab;
+      /** Over the title («32 ingredientes · hoy»); null while it loads. */
+      meta: string | null;
       actions?: ReactNode;
 };
 
-// Mi cocina, Mi despensa, Lista de compras and Mi semana share this header; the title switches between them.
-export default function KitchenHeader({ title, meta, actions }: KitchenHeaderProps) {
-      const { pathname } = useLocation();
-      const [open, setOpen] = useState(false);
-      const menuId = useId();
-      const root = useRef<HTMLDivElement>(null);
+const focus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong";
 
-      useEffect(() => {
-            if (!open) return;
-            const close = (event: Event) => {
-                  if (event instanceof KeyboardEvent ? event.key === "Escape" : !root.current?.contains(event.target as Node)) setOpen(false);
-            };
-            document.addEventListener("pointerdown", close);
-            document.addEventListener("keydown", close);
-            return () => {
-                  document.removeEventListener("pointerdown", close);
-                  document.removeEventListener("keydown", close);
-            };
-      }, [open]);
+// Mi cocina: what you cooked, recipes, the pantry (with the shopping list) and the week, one tab each.
+export default function KitchenHeader({ section, pantryTab = "items", meta, actions }: KitchenHeaderProps) {
+      const { title, icon } = sections.find((s) => s.id === section)!;
 
       return (
-            <header className="mx-auto flex max-w-xl items-end gap-3 px-5 pt-6 pb-3">
-                  <div ref={root} className="relative min-w-0 flex-1">
-                        {/* As in the design: the count sits over the title. */}
-                        {meta === null ? <SkText size="sm" w="w-32" className="mb-1" /> : meta && <p className="mb-1 truncate text-sm font-semibold text-ink-muted">{meta}</p>}
-                        <h1 className="text-[clamp(1.35rem,5.9vw,1.85rem)] leading-[1.15] font-extrabold text-ink">
-                              <button
-                                    type="button"
-                                    aria-expanded={open}
-                                    aria-controls={menuId}
-                                    aria-label={`${title}: cambiar de sección`}
-                                    onClick={() => setOpen((v) => !v)}
-                                    className="group -ml-1 flex max-w-full items-center gap-1.5 rounded-control px-1 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong"
-                              >
-                                    <span className="min-w-0 pb-0.5 text-balance">
-                                          <MarkerText>{title}</MarkerText>
-                                    </span>
-                                    <Icon name="chevronDown" className={`size-5 shrink-0 text-ink-muted transition-transform group-hover:text-ink ${open ? "rotate-180" : ""}`} strokeWidth={2.5} />
-                              </button>
-                        </h1>
-                        {open && (
-                              <ul id={menuId} className="absolute top-full left-0 z-30 mt-2 w-60 rounded-card bg-card p-2 shadow-[0_18px_40px_-16px_rgb(43_20_51/0.45)]">
-                                    {kitchenSections.map((section) => {
-                                          const current = pathname.startsWith(section.to);
-                                          return (
-                                                <li key={section.to}>
-                                                      <Link
-                                                            to={section.to}
-                                                            aria-current={current ? "page" : undefined}
-                                                            onClick={() => setOpen(false)}
-                                                            className={`flex min-h-12 items-center gap-3 rounded-control px-3 font-bold focus-visible:outline-2 focus-visible:outline-primary-strong ${
-                                                                  current ? "bg-primary-soft text-rose-ink" : "text-ink hover:bg-field"
-                                                            }`}
-                                                      >
-                                                            <Icon name={section.icon} className="size-5" />
-                                                            <span className="flex-1">{section.label}</span>
-                                                            {current && <Icon name="check" className="size-4" strokeWidth={3} />}
-                                                      </Link>
-                                                </li>
-                                          );
-                                    })}
-                              </ul>
-                        )}
-                  </div>
-                  {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
-            </header>
+            <ScreenHeader title={title} icon={icon} eyebrow={meta} actions={actions}>
+                  <nav aria-label="Secciones de tu cocina" className="grid grid-cols-4 gap-1 rounded-[1.75rem] bg-card p-1.5 shadow-soft">
+                        {sections.map((s) => {
+                              const current = s.id === section;
+                              return (
+                                    <Link
+                                          key={s.id}
+                                          to={s.to}
+                                          aria-current={current ? "page" : undefined}
+                                          className={`flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-[1.375rem] text-xs font-bold whitespace-nowrap transition-colors ${focus} ${current ? "bg-brand text-card shadow-brand" : "text-ink-muted hover:text-ink"}`}
+                                    >
+                                          <Icon name={s.icon} className="size-5 shrink-0" strokeWidth={2} />
+                                          {s.tab}
+                                    </Link>
+                              );
+                        })}
+                  </nav>
+
+                  {section === "pantry" && (
+                        <nav aria-label="Secciones de tu despensa" className="grid grid-cols-2 gap-2">
+                              {pantryTabs.map((t) => {
+                                    const current = t.id === pantryTab;
+                                    return (
+                                          <Link
+                                                key={t.id}
+                                                to={t.to}
+                                                aria-current={current ? "page" : undefined}
+                                                className={`flex min-h-11 items-center justify-center gap-2 rounded-control border-2 px-2 text-sm font-bold whitespace-nowrap transition-colors ${focus} ${
+                                                      current ? "border-primary/60 bg-picked text-ink" : "border-transparent bg-card/60 text-ink-muted hover:bg-card hover:text-ink"
+                                                }`}
+                                          >
+                                                <Icon name={t.icon} className={`size-[1.125rem] shrink-0 ${current ? "text-primary-strong" : ""}`} strokeWidth={2} />
+                                                {t.label}
+                                          </Link>
+                                    );
+                              })}
+                        </nav>
+                  )}
+            </ScreenHeader>
       );
 }

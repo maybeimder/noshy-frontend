@@ -18,6 +18,9 @@ const ChefPage = lazy(() => import("@/modules/chef/pages/ChefPage"));
 const RecipesPage = lazy(() => import("@/modules/recipes/pages/RecipesPage"));
 const CookedPage = lazy(() => import("@/modules/recipes/pages/CookedPage"));
 const RecipeDetailPage = lazy(() => import("@/modules/recipes/pages/RecipeDetailPage"));
+const SharedRecipePage = lazy(() => import("@/modules/recipes/pages/SharedRecipePage"));
+const CreatorPage = lazy(() => import("@/modules/recipes/pages/CreatorPage"));
+const HistoryPage = lazy(() => import("@/modules/cooking/pages/HistoryPage"));
 const RecipeEditorPage = lazy(() => import("@/modules/recipes/pages/RecipeEditorPage"));
 const CookPage = lazy(() => import("@/modules/cook/pages/CookPage"));
 const ProfilePage = lazy(() => import("@/modules/profile/pages/ProfilePage"));
@@ -40,6 +43,8 @@ export const routes: RouteObject[] = [
       },
       // Shared shopping list: public.
       { path: "/l/:token", element: <SharedListPage /> },
+      // Shared recipe: public.
+      { path: "/r/:key", element: <SharedRecipePage /> },
       {
             element: <ProtectedRoute />,
             children: [
@@ -62,6 +67,8 @@ export const routes: RouteObject[] = [
                                           { path: "/chef", element: <ChefPage /> },
                                           { path: "/recetas", element: <RecipesPage /> },
                                           { path: "/comunidad/:id", element: <ToRecipe /> },
+                                          { path: "/creador/:id", element: <CreatorPage /> },
+                                          { path: "/historial", element: <HistoryPage /> },
                                     ],
                               },
                         ],

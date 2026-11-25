@@ -1,11 +1,8 @@
-import { useEffect } from "react";
-import { keepPreviousData, useInfiniteQuery, useMutation, useQueries, useQuery, useQueryClient, type InfiniteData, type QueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/modules/auth/hooks/useAuth";
-import { useUserValue } from "@/shared/lib/user-store";
+import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClient, type InfiniteData, type QueryClient } from "@tanstack/react-query";
 import type { Page } from "@/shared/lib/axios";
 import type { RecipeCard } from "@/shared/types/api";
 import type { RecommendationFilters } from "@/shared/types/api";
-import { recipesApi } from "../api/recipes.api";
+import { recipesApi, type FeedOptions } from "../api/recipes.api";
 import type { FeedItem, RecipeDetail } from "../types";
 
 const paged = { initialPageParam: undefined as string | undefined };
@@ -47,14 +44,19 @@ export function useMyRecipes() {
       return useInfiniteQuery({ queryKey: ["myRecipes"], queryFn: ({ pageParam }) => recipesApi.mine(pageParam), ...paged, getNextPageParam: nextPage });
 }
 
-export function useFeed(filter: string) {
+export function useFeed(filter: string, options: FeedOptions = {}) {
       return useInfiniteQuery({
-            queryKey: ["feed", filter],
-            queryFn: ({ pageParam }) => recipesApi.feed(filter, pageParam),
+            queryKey: ["feed", filter, options],
+            queryFn: ({ pageParam }) => recipesApi.feed(filter, options, pageParam),
             ...paged,
             getNextPageParam: nextPage,
-            placeholderData: keepPreviousData,
+            // Not across creators: the wrong recipes would show under the new name.
+            placeholderData: options.authorId ? undefined : keepPreviousData,
       });
+}
+
+export function useCreator(id: string) {
+      return useQuery({ queryKey: ["creator", id], queryFn: () => recipesApi.creator(id) });
 }
 
 export function useCreators() {
@@ -102,89 +104,52 @@ function patchRecipe(queryClient: QueryClient, id: string, flags: Flags) {
             },
       );
       if (flags.saved !== undefined) {
-            queryClient.setQueriesData<InfiniteData<Page<RecipeCard>>>({ queryKey: ["recommendations"] }, (old) =>
-                  old && { ...old, pages: old.pages.map((page) => ({ ...page, data: page.data.map((r) => (r.id === id ? { ...r, isSaved: flags.saved! } : r)) })) },
-            );
+            for (const key of ["recommendations", "savedRecipes"])
+                  queryClient.setQueriesData<InfiniteData<Page<RecipeCard>>>({ queryKey: [key] }, (old) =>
+                        old && { ...old, pages: old.pages.map((page) => ({ ...page, data: page.data.map((r) => (r.id === id ? { ...r, isSaved: flags.saved! } : r)) })) },
+                  );
       }
 }
 
-/** Optimistic toggle: paint now, undo if the API says no, then settle with the server's numbers. */
-/**
- * Recipes the user saved, newest first. The API stores saves but has no endpoint that lists them
- * (proposed: GET /me/saved-recipes), so this device remembers the ids it saved or saw saved.
- */
-export function useSavedIds() {
-      const { user } = useAuth();
-      const [ids, setIds] = useUserValue<string[]>(user?.id ?? "anon", "savedRecipeIds");
-      const list = ids ?? [];
-      return {
-            ids: list,
-            mark: (id: string, on: boolean) => {
-                  if (on === list.includes(id)) return;
-                  setIds(on ? [id, ...list] : list.filter((x) => x !== id));
-            },
-      };
-}
-
-/** Keeps the local list in step with what the API says about one recipe. */
-export function useSyncSaved(id: string | undefined, isSaved: boolean | undefined) {
-      const { ids, mark } = useSavedIds();
-      const known = id ? ids.includes(id) : false;
-      useEffect(() => {
-            if (id && isSaved !== undefined && isSaved !== known) mark(id, isSaved);
-            // eslint-disable-next-line react-hooks/exhaustive-deps
-      }, [id, isSaved, known]);
-}
-
-/** The saved recipes themselves, one detail request each (cached with the recipe screens). */
+/** Recipes the user saved, newest first. */
 export function useSavedRecipes() {
-      const { ids } = useSavedIds();
-      const results = useQueries({
-            queries: ids.map((id) => ({ queryKey: ["recipe", id, {}], queryFn: () => recipesApi.detail(id), staleTime: 5 * 60_000, retry: false })),
-      });
-      return {
-            pending: results.some((r) => r.isPending),
-            // A recipe that no longer exists (404) simply drops out.
-            recipes: results.flatMap((r) => (r.data && r.data.viewer.isSaved ? [r.data] : [])),
-      };
+      const query = useInfiniteQuery({ queryKey: ["savedRecipes"], queryFn: ({ pageParam }) => recipesApi.saved(pageParam), ...paged, getNextPageParam: nextPage });
+      return { query, pending: query.isPending, recipes: (query.data?.pages ?? []).flatMap((p) => p.data) };
 }
 
+/** Optimistic toggle: paint now, undo if the API says no, then settle with the server's numbers. */
 function useToggle<T>(
       mutationFn: (input: { id: string; on: boolean }) => Promise<T>,
       flag: "liked" | "saved",
       settle: (result: T) => Flags,
-      onDone?: (id: string, on: boolean) => void,
 ) {
       const queryClient = useQueryClient();
-      const after = useInvalidate("recipe", "feed", "recommendations", "home");
+      const after = useInvalidate("recipe", "feed", "recommendations", "home", "savedRecipes");
       return useMutation({
             mutationFn,
             onMutate: async ({ id, on }) => {
                   await queryClient.cancelQueries({ queryKey: ["recipe", id] });
                   await queryClient.cancelQueries({ queryKey: ["feed"] });
-                  const snapshot = [...queryClient.getQueriesData({ queryKey: ["recipe", id] }), ...queryClient.getQueriesData({ queryKey: ["feed"] }), ...queryClient.getQueriesData({ queryKey: ["recommendations"] })];
+                  const snapshot = [["recipe", id], ["feed"], ["recommendations"], ["savedRecipes"]].flatMap((queryKey) => queryClient.getQueriesData({ queryKey }));
                   patchRecipe(queryClient, id, { [flag]: on });
                   return { snapshot };
             },
             onError: (_error, _input, context) => context?.snapshot.forEach(([key, data]) => queryClient.setQueryData(key, data)),
-            onSuccess: (result, { id, on }) => {
-                  patchRecipe(queryClient, id, settle(result));
-                  onDone?.(id, on);
-            },
+            onSuccess: (result, { id }) => patchRecipe(queryClient, id, settle(result)),
             onSettled: after,
       });
 }
 
 export function useRecipeActions() {
-      const saved = useSavedIds();
-      const afterFollow = useInvalidate("creators", "feed");
+      const afterFollow = useInvalidate("creators", "creator", "feed");
       const afterComment = useInvalidate("comments", "feed");
       const afterAdapt = useInvalidate("recipe");
       return {
-            save: useToggle(recipesApi.setSaved, "saved", () => ({}), saved.mark),
+            save: useToggle(recipesApi.setSaved, "saved", () => ({})),
             like: useToggle(recipesApi.setLiked, "liked", (result) => ({ liked: result.liked, likes: result.likes })),
             follow: useMutation({ mutationFn: recipesApi.setFollowing, onSuccess: afterFollow }),
             comment: useMutation({ mutationFn: recipesApi.addComment, onSuccess: afterComment }),
+            removeComment: useMutation({ mutationFn: recipesApi.removeComment, onSuccess: afterComment }),
             adapt: useMutation({ mutationFn: recipesApi.applyAdaptation, onSuccess: afterAdapt }),
       };
 }
@@ -196,6 +161,8 @@ export function useMyRecipeMutations() {
             create: useMutation({ mutationFn: recipesApi.create, onSuccess }),
             update: useMutation({ mutationFn: recipesApi.update, onSuccess }),
             publish: useMutation({ mutationFn: recipesApi.publish, onSuccess: onPublished }),
+            unpublish: useMutation({ mutationFn: recipesApi.unpublish, onSuccess: onPublished }),
+            remove: useMutation({ mutationFn: recipesApi.remove, onSuccess: onPublished }),
       };
 }
 
@@ -214,6 +181,6 @@ export function useRecipeSeed(id: string | undefined): Seed | null {
             }
             Object.values(value).forEach((child) => visit(child, depth + 1));
       };
-      if (id) for (const key of ["home", "recommendations", "feed", "cookedRecipes", "menu"]) queryClient.getQueriesData({ queryKey: [key] }).forEach(([, data]) => visit(data, 0));
+      if (id) for (const key of ["home", "recommendations", "feed", "cookedRecipes", "savedRecipes", "menu"]) queryClient.getQueriesData({ queryKey: [key] }).forEach(([, data]) => visit(data, 0));
       return found;
 }

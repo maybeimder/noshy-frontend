@@ -22,6 +22,8 @@ export const menusApi = {
                   }),
       get: (id: string) => api.get<{ data: Menu }>(`/me/menus/${id}`).then(unwrap),
       retry: (id: string) => api.post<{ data: Menu }>(`/me/menus/${id}/retry`).then(unwrap),
+      /** Other recipes from today on. */
+      regenerate: (id: string) => api.post<{ data: Menu }>(`/me/menus/${id}/regenerate`).then(unwrap),
       addEntry: ({ menuId, ...input }: { menuId: string; date: string; slot: MealSlotId; recipeId: string; servings?: number }) =>
             api.post<{ data: Menu }>(`/me/menus/${menuId}/entries`, input).then(unwrap),
       patchEntry: ({ menuId, entryId, patch }: { menuId: string; entryId: string; patch: { date?: string; slot?: MealSlotId; servings?: number } }) =>

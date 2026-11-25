@@ -1,12 +1,13 @@
 import type { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { Sparkle, Star } from "../ui/Doodles";
-import Icon from "../ui/Icon";
+import Icon, { type IconName } from "../ui/Icon";
 import { roundButtonClass } from "../ui/RoundButton";
-import ScribbleText from "../ui/ScribbleText";
+import ScribbleText, { TitleIcon } from "../ui/ScribbleText";
 
 type PageHeaderProps = {
       title: string;
+      icon?: IconName;
       subtitle?: string;
       /** Where "back" goes when there is no history (e.g. a deep link). */
       backTo?: string;
@@ -19,7 +20,7 @@ type PageHeaderProps = {
 /** Kept for screens that place their own icon buttons in `actions`. */
 export const iconButtonClass = roundButtonClass("card");
 
-export default function PageHeader({ title, subtitle, backTo, actions, scribble, decoration }: PageHeaderProps) {
+export default function PageHeader({ title, icon, subtitle, backTo, actions, scribble, decoration }: PageHeaderProps) {
       const navigate = useNavigate();
 
       const goBack = () => {
@@ -37,8 +38,9 @@ export default function PageHeader({ title, subtitle, backTo, actions, scribble,
                         </button>
                   )}
                   <div className="relative min-w-0 flex-1">
-                        <h1 className={`inline-block max-w-full text-[1.75rem] leading-tight font-extrabold text-ink ${scribble ? "pb-2" : "truncate"}`}>
-                              {scribble ? <ScribbleText color={scribble}>{title}</ScribbleText> : title}
+                        <h1 className={`inline-flex max-w-full items-center gap-2 align-top text-[1.75rem] leading-tight font-semibold text-ink ${scribble ? "pb-2" : ""}`}>
+                              {icon && <TitleIcon name={icon} />}
+                              {scribble ? <ScribbleText color={scribble}>{title}</ScribbleText> : <span className="truncate">{title}</span>}
                         </h1>
                         {decoration === "star" && <Star className="absolute top-0 ml-2 inline size-6 rotate-12 text-primary" />}
                         {decoration === "sparkle" && <Sparkle className="absolute top-0 ml-2 inline size-4 text-secondary" />}

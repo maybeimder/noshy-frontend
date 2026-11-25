@@ -11,7 +11,7 @@ export type Facet = { id: string; label: string; count?: number };
 export type MealSlotId = "breakfast" | "snack1" | "lunch" | "snack2" | "dinner";
 export type StoragePlace = "fridge" | "pantry" | "freezer";
 
-export type RecommendationFilters = { slot?: MealSlotId; source?: "forYou" | "pantry" | "library"; usingIngredientIds?: string[]; maxMinutes?: number };
+export type RecommendationFilters = { slot?: MealSlotId; source?: "forYou" | "pantry" | "library"; usingIngredientIds?: string[]; maxMinutes?: number; /** Words of the title. */ q?: string };
 
 export type ChefAction =
       | { type: "openChef"; threadId?: string; prompt?: string }
@@ -44,6 +44,8 @@ export type MealSlot = {
       kcal: number | null;
       window: { from: string; to: string };
 };
-export type DaySummary = { date: string; nutrition: { consumed: Macros; target: Macros }; meals: MealSlot[] };
+export type MealEntry = { id: string; slot: MealSlotId; label: string; recipeId: string | null; skipped: boolean } & Macros;
+/** `entries`: what was logged, one by one; missing on older servers. */
+export type DaySummary = { date: string; nutrition: { consumed: Macros; target: Macros }; meals: MealSlot[]; entries?: MealEntry[] };
 
 export type Compatibility = { ok: boolean; conflicts: Labeled[]; adaptable: boolean };

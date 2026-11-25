@@ -1,5 +1,5 @@
 import { api, body, idempotent, unwrap, type Page } from "@/shared/lib/axios";
-import type { IngredientOption, PantryAdd, PantryAnswer, PantryFilters, PantryItem, PantryOverview, PantryPatch, PantrySuggestions } from "../types";
+import type { IngredientOption, ProductOption, PantryAdd, PantryAnswer, PantryFilters, PantryItem, PantryOverview, PantryPatch, PantrySuggestions } from "../types";
 
 export const inventoryApi = {
       overview: () => api.get<{ data: PantryOverview }>("/me/pantry/overview").then(unwrap),
@@ -11,6 +11,7 @@ export const inventoryApi = {
             api.delete(`/me/pantry/${id}`, { params: { addToShoppingList } }).then(() => undefined),
       searchIngredients: (q: string, signal?: AbortSignal) =>
             api.get<{ data: IngredientOption[] }>("/catalog/ingredients/search", { params: { q, limit: 10 }, signal }).then(unwrap),
+      products: (ingredientId: string) => api.get<{ data: ProductOption[] }>(`/catalog/ingredients/${encodeURIComponent(ingredientId)}/products`).then(unwrap),
       suggestions: () => api.get<{ data: PantrySuggestions }>("/me/pantry/suggestions").then(unwrap),
       saveAnswers: ({ answers, key }: { answers: PantryAnswer[]; key: string }) =>
             api.post("/me/pantry/bulk", { answers, skipped: answers.length === 0 }, idempotent(key)).then(() => undefined),

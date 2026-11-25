@@ -7,14 +7,15 @@ import { SkGroup, SkText, times } from "@/shared/components/ui/Skeleton";
 import Stepper from "@/shared/components/ui/Stepper";
 import TextField from "@/shared/components/ui/TextField";
 import { newKey } from "@/shared/lib/axios";
-import type { Macros, MealSlot } from "@/shared/types/api";
+import type { Macros, MealEntry, MealSlot } from "@/shared/types/api";
 import { useMealMutations } from "../hooks/useHome";
 import type { LoggedMeal, LogMeal } from "../types";
+import MealEntries from "./MealEntries";
 
 type Mode = "cooked" | "text";
 
 /** Logs a meal of one slot: something cooked, or free text with estimated macros. */
-export default function LogMealDialog({ slot, date, onClose }: { slot: MealSlot; date: string; onClose: () => void }) {
+export default function LogMealDialog({ slot, date, entries = [], onClose }: { slot: MealSlot; date: string; /** Already logged in this slot. */ entries?: MealEntry[]; onClose: () => void }) {
       const cooked = useCookedRecipes("all");
       const { log, remove, estimate } = useMealMutations();
       const [mode, setMode] = useState<Mode>("text");
@@ -66,6 +67,7 @@ export default function LogMealDialog({ slot, date, onClose }: { slot: MealSlot;
                         </div>
                   ) : (
                         <div className="flex flex-col gap-4">
+                              {entries.length > 0 && <MealEntries date={date} entries={entries} withSlot={false} />}
                               <Chips<Mode>
                                     label="Cómo comiste"
                                     options={[

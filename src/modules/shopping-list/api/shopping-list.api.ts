@@ -16,6 +16,10 @@ export const shoppingListApi = {
                   }),
       patchItem: ({ listId, itemId, patch }: { listId: string; itemId: string; patch: ItemPatch }) =>
             api.patch<{ data: ItemChange }>(`/me/shopping-lists/${listId}/items/${itemId}`, patch).then(unwrap),
+      removeItem: ({ listId, itemId }: { listId: string; itemId: string }) => api.delete(`/me/shopping-lists/${listId}/items/${itemId}`).then(() => undefined),
+      /** Takes the recipe off, with what was on the list only for it. */
+      removeRecipe: ({ listId, recipeId }: { listId: string; recipeId: string }) =>
+            api.delete<{ data: { removed: number } }>(`/me/shopping-lists/${listId}/recipes/${recipeId}`).then(unwrap),
       swap: ({ listId, itemId, suggestionId }: { listId: string; itemId: string; suggestionId: string }) =>
             api.post<{ data: ItemChange }>(`/me/shopping-lists/${listId}/items/${itemId}/swap`, { suggestionId }).then(unwrap),
       addItems: (items: { ingredientId: string; quantity?: QuantityInput; sourceRecipeId?: string }[]) =>

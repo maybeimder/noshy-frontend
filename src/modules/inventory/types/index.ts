@@ -24,12 +24,15 @@ export type PantryOverview = {
       storageCounts: Record<"all" | StoragePlace, number>;
 };
 
-export type PantryAdd = { ingredientId: string; quantity?: QuantityInput; storage?: StoragePlace };
-export type PantryPatch = { remainingPct?: number; storage?: StoragePlace; expiresOn?: string };
+/** From the catalog (maybe a product of it), or written by hand when it is not there. */
+export type PantryAdd = ({ ingredientId: string; productId?: string } | { text: string }) & { quantity?: QuantityInput; storage?: StoragePlace };
+export type ProductOption = { id: string; label: string; brand: string; packLabel: string; price: Money | null };
+/** A new `quantity` counts as full. */
+export type PantryPatch = { quantity?: QuantityInput; remainingPct?: number; storage?: StoragePlace; expiresOn?: string };
 export type PantryFilters = { storage?: StoragePlace; q?: string; sort?: "recent" | "expiresOn" | "name" };
 
 /** One hit of GET /catalog/ingredients/search. */
-export type IngredientOption = { id: string; label: string; icon: string; /** Product photo, when the catalog has one. */ imageUrl?: string | null; defaultUnit: Unit; allowedUnits: Unit[]; conflicts: Labeled[] };
+export type IngredientOption = { id: string; label: string; icon: string; /** Product photo, when the catalog has one. */ imageUrl?: string | null; defaultUnit: Unit; allowedUnits: Unit[]; /** Accepted too (grams of rice, cups of milk). */ otherUnits?: Unit[]; conflicts: Labeled[] };
 
 export type PantrySuggestion = { ingredientId: string; label: string; usedIn: { dishId: string; label: string }[]; packLabel: string | null; estimatedPrice: Money | null };
 export type PantrySuggestions = {

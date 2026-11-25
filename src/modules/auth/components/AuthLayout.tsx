@@ -1,10 +1,9 @@
-import { useState, type FormEventHandler, type ReactNode } from "react";
+import type { FormEventHandler, ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { BackButton } from "@/modules/plans/components/OnboardingUI";
 import Button from "@/shared/components/ui/Button";
-import Dialog from "@/shared/components/ui/Dialog";
-import Icon from "@/shared/components/ui/Icon";
 import MascotBubble from "@/shared/components/ui/MascotBubble";
+import SocialSignIn from "./SocialSignIn";
 
 type AuthLayoutProps = {
       /** Centered in the header («Paso 0 · Tu cuenta»). */
@@ -22,7 +21,6 @@ type AuthLayoutProps = {
 export default function AuthLayout({ step, bubble, onSubmit, submitLabel, submitting, children, footer }: AuthLayoutProps) {
       const navigate = useNavigate();
       const location = useLocation();
-      const [provider, setProvider] = useState<"Google" | "Apple" | null>(null);
 
       return (
             <div className="min-h-dvh overflow-x-clip bg-canvas">
@@ -39,18 +37,7 @@ export default function AuthLayout({ step, bubble, onSubmit, submitLabel, submit
                         <form noValidate onSubmit={onSubmit} className="mt-6 flex flex-1 flex-col gap-4">
                               {children}
 
-                              <div className="mt-2 flex items-center gap-3 text-xs font-semibold text-ink-muted">
-                                    <span aria-hidden className="h-px flex-1 bg-line" />o continúa con
-                                    <span aria-hidden className="h-px flex-1 bg-line" />
-                              </div>
-                              <div className="grid grid-cols-2 gap-3">
-                                    {(["Google", "Apple"] as const).map((name) => (
-                                          <Button key={name} variant="secondary" size="lg" onClick={() => setProvider(name)}>
-                                                <Icon name={name === "Google" ? "google" : "apple"} className="size-5" strokeWidth={1.75} />
-                                                {name}
-                                          </Button>
-                                    ))}
-                              </div>
+                              <SocialSignIn />
 
                               <div className="mt-auto flex flex-col gap-3 pt-8">
                                     <Button type="submit" size="lg" fullWidth arrow loading={submitting}>
@@ -60,10 +47,6 @@ export default function AuthLayout({ step, bubble, onSubmit, submitLabel, submit
                               </div>
                         </form>
                   </main>
-
-                  <Dialog open={provider !== null} onClose={() => setProvider(null)} title={`Entrar con ${provider ?? ""}`}>
-                        <p className="text-ink-muted">Muy pronto podrás entrar con {provider}. Por ahora usa tu correo y una contraseña.</p>
-                  </Dialog>
             </div>
       );
 }

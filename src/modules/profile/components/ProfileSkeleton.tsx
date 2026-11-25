@@ -37,14 +37,7 @@ export default function ProfileSkeleton() {
                         <SkText size="sm" w="w-28" />
                         <InsightsSkeleton />
                   </div>
-                  <div className="flex flex-col gap-4 rounded-card bg-card p-5">
-                        <h2 className="text-section font-extrabold text-ink">Tus metas diarias</h2>
-                        <div className="grid grid-cols-2 gap-3">
-                              {times(4).map((i) => (
-                                    <Sk key={i} className="h-20" />
-                              ))}
-                        </div>
-                  </div>
+                  <Sk className="h-16 rounded-card" />
                   <div className="rounded-card bg-card p-5">
                         <h2 className="mb-2 text-section font-extrabold text-ink">Tus preferencias</h2>
                         <div className="divide-y divide-line">

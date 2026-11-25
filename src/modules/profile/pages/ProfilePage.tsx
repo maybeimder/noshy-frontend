@@ -88,6 +88,17 @@ export default function ProfilePage() {
                                           <Insights />
                                     </section>
 
+                                    <Link to="/historial" className={`flex min-h-16 items-center gap-3 rounded-card bg-card px-4 py-2 shadow-soft ${focus}`}>
+                                          <span aria-hidden className={`grid size-10 shrink-0 place-items-center rounded-control ${tones.sky.soft} ${tones.sky.ink}`}>
+                                                <Icon name="calendar" className="size-5" strokeWidth={2} />
+                                          </span>
+                                          <span className="min-w-0 flex-1">
+                                                <span className="block font-display font-extrabold text-ink">Tu historial</span>
+                                                <span className="block truncate text-sm text-ink-muted">Lo que comiste cada día</span>
+                                          </span>
+                                          <Icon name="chevronRight" className="size-5 shrink-0 text-ink-muted" />
+                                    </Link>
+
                                     <section aria-labelledby="preferences">
                                           <div className="mb-3 flex items-baseline justify-between gap-3">
                                                 <h2 id="preferences" className="text-section font-extrabold text-ink">

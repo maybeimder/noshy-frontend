@@ -3,17 +3,16 @@ import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "@/modules/auth/hooks/useAuth";
 import { useOnboardingSkipped } from "@/modules/plans/utils/onboarding";
 import AppHeader from "@/shared/components/layout/AppHeader";
-import Icon from "@/shared/components/ui/Icon";
+import Icon, { type IconName } from "@/shared/components/ui/Icon";
 import { MascotAvatar } from "@/shared/components/ui/MascotBubble";
 import { ErrorState } from "@/shared/components/ui/QueryState";
-import { MarkerText } from "@/shared/components/ui/ScribbleText";
+import { MarkerText, TitleIcon } from "@/shared/components/ui/ScribbleText";
 import { plural } from "@/shared/lib/format";
 import type { MealSlot } from "@/shared/types/api";
 import { useRememberShape } from "@/shared/hooks/useShape";
-import DayCard from "../components/DayCard";
+import HomeHeader, { HomeHeaderSkeleton } from "../components/HomeHeader";
 import HomeSkeleton, { type HomeShape } from "../components/HomeSkeleton";
 import LogMealDialog from "../components/LogMealDialog";
-import MealsRow from "../components/MealsRow";
 import MostCooked from "../components/MostCooked";
 import NudgeCard from "../components/NudgeCard";
 import TodayCarousel from "../components/TodayCarousel";
@@ -21,10 +20,11 @@ import { useHome } from "../hooks/useHome";
 
 const cardLink = "mx-5 flex items-center gap-4 rounded-card bg-card p-5 shadow-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-strong";
 
-function SectionTitle({ id, title, action }: { id: string; title: string; action?: { to: string; label: string } }) {
+function SectionTitle({ id, title, icon, action }: { id: string; title: string; icon: IconName; action?: { to: string; label: string } }) {
       return (
-            <div className="flex items-end justify-between gap-3 px-5">
-                  <h2 id={id} className="text-section font-extrabold text-ink">
+            <div className="flex items-center justify-between gap-3 px-5">
+                  <h2 id={id} className="flex min-w-0 items-center gap-2 text-section text-ink">
+                        <TitleIcon name={icon} />
                         <MarkerText>{title}</MarkerText>
                   </h2>
                   {action && (
@@ -56,7 +56,7 @@ export default function HomePage() {
             return (
                   <>
                         <AppHeader />
-                        <main className="mx-auto max-w-xl pt-3">
+                        <main className="mx-auto max-w-xl pt-6">
                               <Link to="/plan/nuevo" className={cardLink}>
                                     <span className="grid size-12 shrink-0 place-items-center rounded-full bg-peach-soft text-peach-ink">
                                           <Icon name="target" />
@@ -76,15 +76,15 @@ export default function HomePage() {
       if (home.isPending) {
             return (
                   <>
-                        <AppHeader />
+                        <HomeHeaderSkeleton />
                         <HomeSkeleton />
                   </>
             );
       }
       return (
             <>
-                  <AppHeader />
-                  <main className="mx-auto flex max-w-xl flex-col gap-6 pt-3 pb-12">
+                  {data?.day ? <HomeHeader day={data.day} onPick={setSlot} /> : <AppHeader />}
+                  <main className="mx-auto flex max-w-xl flex-col gap-6 pt-6 pb-12">
                         {home.isError ? (
                               <div className="px-5">
                                     <ErrorState message={home.error.message} onRetry={() => home.refetch()} />
@@ -105,15 +105,9 @@ export default function HomePage() {
                                                 <Icon name="arrowRight" className="size-6 shrink-0 text-primary-strong" />
                                           </Link>
                                     )}
-                                    {data.day && (
-                                          <>
-                                                <DayCard day={data.day} />
-                                                <MealsRow meals={data.day.meals} onPick={setSlot} />
-                                          </>
-                                    )}
                                     {data.ideas && data.ideas.items.length > 0 && (
                                           <section aria-labelledby="for-you" className="flex flex-col gap-3">
-                                                <SectionTitle id="for-you" title="Hoy para ti" action={{ to: "/recetas?ver=explorar", label: plural(data.ideas.items.length, "idea", "ideas") }} />
+                                                <SectionTitle id="for-you" icon="star4" title="Hoy para ti" action={{ to: "/recetas?ver=explorar", label: plural(data.ideas.items.length, "idea", "ideas") }} />
                                                 <TodayCarousel recipes={data.ideas.items} />
                                           </section>
                                     )}
@@ -135,14 +129,14 @@ export default function HomePage() {
                                     )}
                                     {data.mostCooked && (
                                           <section aria-labelledby="most-cooked" className="flex flex-col gap-3">
-                                                <SectionTitle id="most-cooked" title="Lo que más cocinas" action={{ to: "/cocinadas", label: "Ver todo" }} />
+                                                <SectionTitle id="most-cooked" icon="pot" title="Lo que más cocinas" action={{ to: "/cocinadas", label: "Ver todo" }} />
                                                 <MostCooked recipes={data.mostCooked} />
                                           </section>
                                     )}
                               </>
                         ) : null}
                   </main>
-                  {slot && data?.day && <LogMealDialog key={slot.slot} slot={slot} date={data.day.date} onClose={() => setSlot(null)} />}
+                  {slot && data?.day && <LogMealDialog key={slot.slot} slot={slot} date={data.day.date} entries={data.day.entries?.filter((e) => e.slot === slot.slot)} onClose={() => setSlot(null)} />}
             </>
       );
 }
